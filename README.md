@@ -2,7 +2,7 @@
 
 ## 👤 Author  
 Dennis Lubins  
-Technical Writer | AI Knowledge Systems | DevOps Documentation  
+Operational Systems Engineer | SQL Server | DevOps | Technical Documentation & Runbooks  
 
 ---
 
