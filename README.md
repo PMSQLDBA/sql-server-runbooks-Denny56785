@@ -107,4 +107,4 @@ Each document includes:
 
 ## 📬 Contact
 
-LinkedIn: [(add your link)](https://www.linkedin.com/in/dennis-lubins-25372a356)
+LinkedIn: https://www.linkedin.com/in/dennis-lubins-25372a356
