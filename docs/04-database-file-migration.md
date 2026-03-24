@@ -166,3 +166,19 @@ This runbook is structured for:
 ## 📌 Summary
 
 A practical, repeatable runbook for safely migrating SQL Server database and log files across storage or infrastructure, ensuring **consistency, reliability, and minimal downtime**.
+
+---
+
+## ✍️ Author Notes
+
+This system was developed to solve a real-world issue where deadlocks were difficult to quantify over time due to the transient nature of Extended Events data.
+
+The original implementation consisted of raw scripts and operational notes. This document represents a structured version designed for reuse, troubleshooting, and team adoption.
+
+---
+
+## 📎 Source Documentation
+
+Derived from real-world implementation artifacts and sanitized for public portfolio use.
+
+- [View Original PDF](../source/file-migration.pdf)
