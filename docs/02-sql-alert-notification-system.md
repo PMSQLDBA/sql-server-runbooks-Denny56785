@@ -1,41 +1,41 @@
 # 📬 SQL Server Alert Notification System
-## PowerShell-Based Database Mail Alternative
+## 🚀 PowerShell-Based Database Mail Alternative
 
 ---
 
-## Overview
+## 📖 Overview
 
 This project provides a **scalable, reliable alternative to SQL Server Database Mail** using a **queue-based architecture** combined with **PowerShell-driven email delivery**.
 
 It is designed for environments where:
 
-- Database Mail is unreliable or restricted
-- High-volume alerting is required
-- Greater control over alert processing is needed
+- ❌ Database Mail is unreliable or restricted  
+- 📈 High-volume alerting is required  
+- ⚙️ Greater control over alert processing is needed  
 
 ---
 
-## Problem
+## ⚠️ Problem
 
 SQL Server Database Mail can fail due to:
 
-- TLS / .NET compatibility issues
-- SMTP connectivity limitations
-- Lack of flexibility in alert handling
+- 🔐 TLS / .NET compatibility issues  
+- 🌐 SMTP connectivity limitations  
+- 🧩 Lack of flexibility in alert handling  
 
 Additionally, native alerting mechanisms:
 
-- Are tightly coupled to SQL Server
-- Lack extensibility
-- Provide limited customization
+- 🔒 Are tightly coupled to SQL Server  
+- 🧱 Lack extensibility  
+- ⚠️ Provide limited customization  
 
 ---
 
-## Solution
+## 💡 Solution
 
 A **decoupled alerting system** separates alert generation from alert delivery.
 
-### Architecture Components
+### 🧱 Architecture Components
 
 | Component | Purpose |
 |----------|---------|
@@ -46,7 +46,7 @@ A **decoupled alerting system** separates alert generation from alert delivery.
 
 ---
 
-## Workflow
+## 🔄 Workflow
 
 ```text
 SQL Alert / Job Failure
@@ -59,14 +59,14 @@ SQL Agent Job (Every Minute)
         ↓
 PowerShell Script
         ↓
-Email Sent → Status Updated
+📧 Email Sent → Status Updated
 ```
 
 ---
 
-## Implementation
+## 🛠️ Implementation
 
-### 1. Create Mail Queue Table
+### 1️⃣ Create Mail Queue Table
 
 ```sql
 CREATE TABLE dbo.SQLAlertEmailQueue (
@@ -80,32 +80,40 @@ CREATE TABLE dbo.SQLAlertEmailQueue (
 );
 ```
 
-### 2. Create Stored Procedure for Alert Ingestion
+---
+
+### 2️⃣ Create Stored Procedure for Alert Ingestion
 
 The stored procedure should:
 
-- Accept subject, body, and recipient parameters
-- Prevent duplicate alerts through throttling
-- Insert new alert records into the queue table
+- 📨 Accept subject, body, and recipient parameters  
+- 🚫 Prevent duplicate alerts through throttling  
+- ➕ Insert new alert records into the queue table  
 
-### 3. PowerShell Processing Layer
+---
+
+### 3️⃣ PowerShell Processing Layer
 
 The PowerShell script should:
 
-- Pull the next pending alert from the queue
-- Send email via SMTP
-- Use TLS with port 587
-- Update the queue record to `Processed` or `Failed`
+- 📥 Pull the next pending alert from the queue  
+- 📤 Send email via SMTP  
+- 🔐 Use TLS with port 587  
+- 🔄 Update the queue record to `Processed` or `Failed`  
 
-### 4. SQL Agent Job
+---
+
+### 4️⃣ SQL Agent Job
 
 The SQL Agent job should:
 
-- Run every minute
-- Execute the PowerShell script
-- Include a cleanup step to remove old records (e.g., older than 30 days)
+- ⏱ Run every minute  
+- ▶ Execute the PowerShell script  
+- 🧹 Include cleanup step (e.g., remove records older than 30 days)  
 
-### 5. SQL Agent Integration
+---
+
+### 5️⃣ SQL Agent Integration
 
 ```sql
 EXEC master.dbo.usp_SendAlertEmail
@@ -117,53 +125,69 @@ EXEC master.dbo.usp_SendAlertEmail
 
 ---
 
-## Key Features
+## ✨ Key Features
 
-- Decoupled alert processing
-- Retry and failure tracking
-- Custom formatting of alerts
-- Throttling to prevent alert spam
-- Supports:
-  - SQL Agent Jobs
-  - SQL Server Alerts
-
----
-
-## Operational Considerations
-
-- Requires outbound SMTP access on port 587
-- SQL Agent jobs must remain enabled
-- Credentials should be secured (avoid plaintext in production)
-- Regular cleanup of the queue table is recommended
+- 🔄 Decoupled alert processing  
+- 🔁 Retry and failure tracking  
+- 🧾 Custom formatting of alerts  
+- 🚫 Throttling to prevent alert spam  
+- 🔌 Supports:
+  - SQL Agent Jobs  
+  - SQL Server Alerts  
 
 ---
 
-## Outcome
+## ⚙️ Operational Considerations
+
+- 🌐 Requires outbound SMTP access on port 587  
+- 🛑 SQL Agent jobs must remain enabled  
+- 🔐 Credentials should be secured (avoid plaintext in production)  
+- 🧹 Regular cleanup of the queue table is recommended  
+
+---
+
+## 📊 Outcome
 
 This solution provides:
 
-- Greater reliability than Database Mail
-- Improved scalability for high alert volumes
-- Enhanced control over alert formatting and delivery
+- ✅ Greater reliability than Database Mail  
+- 📈 Improved scalability for high alert volumes  
+- 🎯 Enhanced control over alert formatting and delivery  
 
 ---
 
-## AI / Knowledge Base Optimization Notes
+## 🤖 AI / Knowledge Base Optimization Notes
 
 This documentation is structured for:
 
-- Retrieval-based systems
-- Chatbot-assisted troubleshooting
-- Runbook automation
+- 📚 Retrieval-based systems  
+- 🤖 Chatbot-assisted troubleshooting  
+- 📘 Runbook automation  
 
 Design considerations:
 
-- Clear separation of architecture, workflow, and implementation
-- Modular sections for indexing
-- Consistent formatting for machine parsing
+- Clear separation of architecture, workflow, and implementation  
+- Modular sections for indexing  
+- Consistent formatting for machine parsing  
 
 ---
 
-## Summary
+## 📌 Summary
 
 A modern, resilient alerting system replacing Database Mail with a **flexible, scalable, production-ready architecture**.
+
+---
+
+## ✍️ Author Notes
+
+This system was developed to solve a real-world issue where deadlocks were difficult to quantify over time due to the transient nature of Extended Events data.
+
+The original implementation consisted of raw scripts and operational notes. This document represents a structured version designed for reuse, troubleshooting, and team adoption.
+
+---
+
+## 📎 Source Documentation
+
+Derived from real-world implementation artifacts and sanitized for public portfolio use.
+
+- [View Original PDF](../source/sql-alert-notification.pdf)
