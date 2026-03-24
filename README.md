@@ -105,3 +105,8 @@ Each document includes:
 ## 📬 Contact
 
 LinkedIn: https://www.linkedin.com/in/dennis-lubins-25372a356
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
