@@ -35,22 +35,22 @@ The goal of this repository is to demonstrate:
 
 ## 📂 Contents
 
-### 🔹 1. [SQL Server Deadlock Monitoring & Alerting System](docs/01-deadlock-monitoring-system.md)
+### 🔹 1. [SQL Server Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
 - Victim-based detection strategy  
 - Threshold-driven alerting  
 - Extended Events parsing  
 
-### 🔹 2. [SQL Alert Notification System (PowerShell-Based)](docs/02-sql-alert-notification-system.md)
+### 🔹 2. [SQL Alert Notification System (PowerShell-Based)](./docs/02-sql-alert-notification-system.md)
 - Queue-based alerting system  
 - SQL + PowerShell integration  
 - Reliable alternative to Database Mail  
 
-### 🔹 3. [Database Mail TLS & .NET Troubleshooting](docs/03-database-mail-tls-troubleshooting.md)
+### 🔹 3. [Database Mail TLS & .NET Troubleshooting](./docs/03-database-mail-tls-troubleshooting.md)
 - TLS 1.2 validation  
 - .NET compatibility checks  
 - Registry-level fixes  
 
-### 🔹 4. [SQL Server Database File Migration Runbook](docs/04-database-file-migration.md)
+### 🔹 4. [SQL Server Database File Migration Runbook](./docs/04-database-file-migration.md)
 - File relocation procedures  
 - System DB handling  
 - Backup/restore migration  
