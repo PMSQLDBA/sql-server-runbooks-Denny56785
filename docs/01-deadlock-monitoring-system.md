@@ -209,3 +209,19 @@ This documentation is structured for:
 ## 📌 Summary
 
 A lightweight, efficient deadlock monitoring system using **victim-based detection**, enabling **trend analysis, proactive alerting, and improved SQL Server reliability**.
+
+---
+
+## ✍️ Author Notes
+
+This system was developed to solve a real-world issue where deadlocks were difficult to quantify over time due to the transient nature of Extended Events data.
+
+The original implementation consisted of raw scripts and operational notes. This document represents a structured version designed for reuse, troubleshooting, and team adoption.
+
+---
+
+## 📎 Source Documentation
+
+Derived from real-world implementation artifacts and sanitized for public portfolio use.
+
+- [View Original PDF](../source/deadlock-monitor.pdf)
