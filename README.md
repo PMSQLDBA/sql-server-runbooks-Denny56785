@@ -2,7 +2,7 @@
 
 ## 👤 Author  
 Dennis Lubins  
-Operational Systems Engineer | SQL Server | DevOps | Technical Documentation & Runbooks  
+Technical Operations & Runbook Portfolio  
 
 ---
 
