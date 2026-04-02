@@ -10,26 +10,33 @@ Technical Operations & Runbook Portfolio
 
 This repository contains a collection of real-world SQL Server runbooks and technical documentation developed from hands-on experience in production environments.
 
-These documents focus on:
-- Translating complex systems into clear, actionable procedures  
-- Designing and documenting operational workflows  
-- Enabling faster troubleshooting and reduced dependency on subject matter experts  
+The focus is not just on documentation, but on solving operational and performance challenges, including:
+
+- Deadlock analysis and concurrency issues
+- Monitoring and alerting system design
+- SQL Server reliability and recovery procedures
+- Troubleshooting complex production incidents
+
+Each document reflects practical, field-tested solutions designed to improve system stability, observability, and response time.
 
 The content is structured to support both:
-- Human operators (DBAs, engineers, support teams)  
-- AI-assisted knowledge systems (chatbots, retrieval-based documentation)  
+
+- Engineers and operators (DBAs, SREs, support teams)
+- AI-assisted knowledge systems and retrieval workflows
 
 ---
 
 ## 🎯 Purpose
 
-The goal of this repository is to demonstrate:
+This repository demonstrates the ability to:
 
-- Technical writing for infrastructure and database systems  
-- System-level thinking and problem decomposition  
-- Ability to document complex workflows and monitoring strategies  
-- Creation of reusable, structured knowledge assets  
-- Writing optimized for both operational use and AI-driven consumption  
+- Diagnose and resolve real-world database and infrastructure issues
+- Translate complex technical problems into clear, actionable solutions
+- Design operational workflows for monitoring, alerting, and recovery
+- Build reusable runbooks for production environments
+- Create documentation optimized for both human use and AI-assisted systems
+
+It reflects a blend of technical operations, performance troubleshooting, and structured documentation practices.
 
 ---
 
@@ -53,19 +60,27 @@ The goal of this repository is to demonstrate:
 ### 🔹 4. [SQL Server Database File Migration Runbook](./docs/04-database-file-migration.md)
 - File relocation procedures  
 - System DB handling  
-- Backup/restore migration  
+- Backup/restore migration
+
+### 🔹 5. [SQL Server Deadlock Analysis: Self-Referencing INSERT Pattern](./docs/05-deadlock-analysis.md)
+- Real-world deadlock investigation
+- Query Store and DMV-based analysis
+- Concurrency pattern identification
+- Practical mitigation and redesign strategies
 
 ---
 
 ## 🧠 Documentation Approach
 
 Each document includes:
-- Overview  
-- Problem  
-- Solution  
-- Implementation  
-- Considerations  
-- Outcome  
+
+- Overview
+- Problem
+- Investigation
+- Solution
+- Implementation
+- Considerations
+- Outcome
 
 ---
 
@@ -74,6 +89,15 @@ Each document includes:
 - Structured for content chunking  
 - Clear procedural steps  
 - Reusable command blocks  
+
+---
+
+## ⚙️ Focus Areas
+
+* SQL Server performance and concurrency
+* Operational reliability and incident response
+* Monitoring and alerting system design
+* Runbook-driven operations and knowledge reuse
 
 ---
 
