@@ -1,4 +1,4 @@
-# ⚔️ SQL Server Deadlock Monitoring & Alerting System
+# 🚨 SQL Server Deadlock Monitoring & Alerting System
 ## Victim-Based Detection Approach
 
 ---
