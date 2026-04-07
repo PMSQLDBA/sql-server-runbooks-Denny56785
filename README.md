@@ -42,8 +42,6 @@ These represent high-impact, production-grade solutions that demonstrate system 
 - Per-database tuning (tempdb, reporting workloads)  
 - Historical tracking for trend and incident analysis  
 
-👉 Demonstrates **SRE-style monitoring design, not just DBA scripting**
-
 ---
 
 ## 📂 Full Runbook Library
