@@ -1,5 +1,7 @@
 # SQL Server Runbooks & Technical Documentation Portfolio
 
+> **Production-grade SQL Server monitoring, alerting, and operational runbooks built from real-world environments.**
+
 ## 👤 Author  
 Dennis Lubins  
 Technical Operations & Runbook Portfolio
@@ -8,79 +10,106 @@ Technical Operations & Runbook Portfolio
 
 ## 📌 Overview
 
-This repository contains a collection of real-world SQL Server runbooks and technical documentation developed from hands-on experience in production environments.
+This repository showcases real-world SQL Server runbooks and technical documentation built from hands-on experience stabilizing, monitoring, and operating production database environments.
 
-The focus is not just on documentation, but on solving operational and performance challenges, including:
+The focus is not just documentation — but **designing operational systems** that improve:
 
-- Deadlock analysis and concurrency issues
-- Monitoring and alerting system design
-- SQL Server reliability and recovery procedures
-- Troubleshooting complex production incidents
-
-Each document reflects practical, field-tested solutions designed to improve system stability, observability, and response time.
-
-The content is structured to support both:
-
-- Engineers and operators (DBAs, SREs, support teams)
-- AI-assisted knowledge systems and retrieval workflows
+- Reliability  
+- Observability  
+- Incident response  
+- Performance stability  
 
 ---
 
-## 🎯 Purpose
+## 🔥 Featured Projects (Start Here)
 
-This repository demonstrates the ability to:
+These represent high-impact, production-grade solutions that demonstrate system design, operational thinking, and advanced SQL Server expertise.
 
-- Diagnose and resolve real-world database and infrastructure issues
-- Translate complex technical problems into clear, actionable solutions
-- Design operational workflows for monitoring, alerting, and recovery
-- Build reusable runbooks for production environments
-- Create documentation optimized for both human use and AI-assisted systems
-
-It reflects a blend of technical operations, performance troubleshooting, and structured documentation practices.
+### 🚨 [SQL Server Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
+- Victim-based deadlock detection using Extended Events  
+- Threshold-driven alerting with noise suppression  
+- Automated operational response workflow  
 
 ---
 
-## 📂 Contents
+### 📊 [SQL Server Disk Latency Monitoring & Alerting System](./docs/06-disk-latency-monitor.md)
+- Interval-based latency detection (solves DMV limitations)  
+- Multi-job monitoring architecture (collector, evaluator, cleanup)  
+- Advanced alerting logic:
+  - Rolling windows  
+  - Consecutive breach detection  
+  - Cooldown suppression  
+- Per-database tuning (tempdb, reporting workloads)  
+- Historical tracking for trend and incident analysis  
 
-### 🔹 1. [SQL Server Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
-- Victim-based detection strategy  
-- Threshold-driven alerting  
+👉 Demonstrates **SRE-style monitoring design, not just DBA scripting**
+
+---
+
+## 📂 Full Runbook Library
+
+### 🔹 Monitoring & Alerting Systems
+
+#### [SQL Server Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
+- Deadlock detection and alerting strategy  
 - Extended Events parsing  
 
-### 🔹 2. [SQL Alert Notification System (PowerShell-Based)](./docs/02-sql-alert-notification-system.md)
+#### [SQL Server Disk Latency Monitoring & Alerting System](./docs/06-disk-latency-monitor.md)
+- Real-time I/O latency monitoring  
+- Interval-based analysis  
+
+#### [SQL Alert Notification System (PowerShell-Based)](./docs/02-sql-alert-notification-system.md)
 - Queue-based alerting system  
 - SQL + PowerShell integration  
 - Reliable alternative to Database Mail  
 
-### 🔹 3. [Database Mail TLS & .NET Troubleshooting](./docs/03-database-mail-tls-troubleshooting.md)
+---
+
+### 🔹 Troubleshooting & Analysis
+
+#### [SQL Server Deadlock Analysis: Self-Referencing INSERT Pattern](./docs/05-deadlock-analysis.md)
+- Real-world deadlock investigation  
+- Query Store and DMV-based analysis  
+- Concurrency pattern identification  
+- Practical mitigation strategies  
+
+#### [Database Mail TLS & .NET Troubleshooting](./docs/03-database-mail-tls-troubleshooting.md)
 - TLS 1.2 validation  
 - .NET compatibility checks  
 - Registry-level fixes  
 
-### 🔹 4. [SQL Server Database File Migration Runbook](./docs/04-database-file-migration.md)
+---
+
+### 🔹 Operations & Maintenance
+
+#### [SQL Server Database File Migration Runbook](./docs/04-database-file-migration.md)
 - File relocation procedures  
 - System DB handling  
-- Backup/restore migration
+- Backup/restore migration  
 
-### 🔹 5. [SQL Server Deadlock Analysis: Self-Referencing INSERT Pattern](./docs/05-deadlock-analysis.md)
-- Real-world deadlock investigation
-- Query Store and DMV-based analysis
-- Concurrency pattern identification
-- Practical mitigation and redesign strategies
+---
+
+## 🎯 What This Portfolio Demonstrates
+
+- Designing **monitoring and alerting systems**, not just queries  
+- Translating complex incidents into **repeatable operational runbooks**  
+- Building **production-ready automation and workflows**  
+- Applying **noise reduction and alert tuning strategies**  
+- Bridging **deep technical work with clear documentation**
 
 ---
 
 ## 🧠 Documentation Approach
 
-Each document includes:
+Each runbook is structured for real-world usability:
 
-- Overview
-- Problem
-- Investigation
-- Solution
-- Implementation
-- Considerations
-- Outcome
+- Overview  
+- Problem  
+- Investigation  
+- Solution  
+- Implementation  
+- Considerations  
+- Outcome  
 
 ---
 
@@ -94,10 +123,10 @@ Each document includes:
 
 ## ⚙️ Focus Areas
 
-* SQL Server performance and concurrency
-* Operational reliability and incident response
-* Monitoring and alerting system design
-* Runbook-driven operations and knowledge reuse
+- SQL Server performance and concurrency  
+- Operational reliability and incident response  
+- Monitoring and alerting system design  
+- Runbook-driven operations and knowledge reuse  
 
 ---
 
@@ -133,4 +162,5 @@ LinkedIn: https://www.linkedin.com/in/dennis-lubins-25372a356
 ---
 
 ## 📄 License
+
 This project is licensed under the MIT License.
