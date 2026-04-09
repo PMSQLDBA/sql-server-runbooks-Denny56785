@@ -83,7 +83,14 @@ These represent high-impact, production-grade solutions that demonstrate system 
 #### [SQL Server Database File Migration Runbook](./docs/04-database-file-migration.md)
 - File relocation procedures  
 - System DB handling  
-- Backup/restore migration  
+- Backup/restore migration
+
+#### [SQL Server Statistics Maintenance Optimization: TempDB Contention Reduction](./docs/07-statistics-maintenance-optimization.md)
+- Investigation of TempDB latency during statistics maintenance  
+- Heavy table identification and workload scoring approach  
+- Targeted statistics maintenance strategy (vs blanket updates)  
+- Phased execution model (daily sampled + monthly fullscan)  
+- Reduction of maintenance overhead and improved system stability    
 
 ---
 
