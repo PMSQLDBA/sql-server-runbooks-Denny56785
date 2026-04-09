@@ -164,4 +164,11 @@ UPDATE STATISTICS [schema].[table] WITH FULLSCAN;
 
 * All identifiers and environment-specific details have been sanitized
 * Approach is adaptable to environments of varying size and workload patterns
+  
+---
 
+## 📎 Source Documentation
+
+Derived from real-world implementation artifacts and sanitized for public portfolio use.
+
+- [View Original PDF](../source/statistics-maintenance-framework.pdf)
