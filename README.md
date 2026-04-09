@@ -85,7 +85,7 @@ These represent high-impact, production-grade solutions that demonstrate system 
 - System DB handling  
 - Backup/restore migration
 
-#### [SQL Server Statistics Maintenance Optimization: TempDB Contention Reduction](./docs/07-statistics-maintenance-optimization.md)
+#### [SQL Server Statistics Maintenance Optimization: TempDB Contention Reduction](./docs/07-statistics-maintenance-framework.md)
 - Investigation of TempDB latency during statistics maintenance  
 - Heavy table identification and workload scoring approach  
 - Targeted statistics maintenance strategy (vs blanket updates)  
