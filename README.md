@@ -31,6 +31,7 @@ These represent high-impact, production-grade solutions that demonstrate system 
 - Victim-based deadlock detection using Extended Events  
 - Threshold-driven alerting with noise suppression  
 - Automated operational response workflow  
+- Built from foundational deadlock analysis and pattern identification  
 
 ---
 
@@ -66,6 +67,12 @@ These represent high-impact, production-grade solutions that demonstrate system 
 ---
 
 ### 🔹 Troubleshooting & Analysis
+
+#### [SQL Server Deadlock Analysis Query (Extended Events)](./docs/08-deadlock-analysis-query.md)
+- Extended Events (`system_health`) deadlock extraction  
+- XML parsing for victim-based identification  
+- Timeframe-based analysis for pattern detection  
+- Foundation for monitoring system design and threshold tuning  
 
 #### [SQL Server Deadlock Analysis: Self-Referencing INSERT Pattern](./docs/05-deadlock-analysis.md)
 - Real-world deadlock investigation  
