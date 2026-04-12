@@ -8,6 +8,20 @@ The deadlocks were traced to concurrent `INSERT...SELECT` operations against the
 
 ---
 
+## 🔗 Related Analysis & Monitoring
+
+This investigation represents a specific deadlock scenario identified through broader deadlock analysis and monitoring efforts.
+
+For system-level visibility and pattern analysis:
+
+➡️ [Deadlock Analysis Query](./08-deadlock-analysis-query.md)
+
+For automated detection and alerting:
+
+➡️ [Deadlock Monitoring System](./01-deadlock-monitoring-system.md)
+
+---
+
 ## 🧩 Problem Statement
 
 * Intermittent deadlocks occurring during data processing operations
