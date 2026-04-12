@@ -102,10 +102,10 @@ DeadlockVictims AS
 
 MonitoredDBs AS
 (
-    SELECT 'LIVE_Planning' AS DatabaseName
-    UNION ALL SELECT 'Database1'
+    SELECT 'Database1' AS DatabaseName
     UNION ALL SELECT 'Database2'
     UNION ALL SELECT 'Database3'
+    UNION ALL SELECT 'Database4'
 ),
 
 DeadlockCounts AS
