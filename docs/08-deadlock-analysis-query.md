@@ -194,6 +194,12 @@ This represents the first step in the workflow:
 
 👉 Visibility → Analysis → Monitoring → Prevention
 
+### Supporting Root Cause Analysis
+
+Detailed investigations into specific deadlock scenarios can be found here:
+
+➡️ [Deadlock Analysis: Self-Referencing INSERT Pattern](./05-deadlock-analysis.md)
+
 ---
 
 ## 📌 Summary
