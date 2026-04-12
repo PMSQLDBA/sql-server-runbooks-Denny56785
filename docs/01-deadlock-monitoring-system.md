@@ -24,7 +24,21 @@ SQL Server does **not provide a direct counter** for deadlocks over time.
 
 - Deadlock events are **transient** and quickly purged  
 - No built-in mechanism for **interval-based deadlock counting**  
-- Difficult to detect patterns such as **deadlock storms**  
+- Difficult to detect patterns such as **deadlock storms**
+
+---
+
+### Real-World Impact
+
+In the environment this system was developed for:
+
+- Over 2,000 deadlocks were occurring daily  
+- Application errors were constant:
+  - “Transaction (Process ID) was deadlocked…”  
+- Job processing frequently stalled  
+- High volume of incident tickets across multiple departments  
+
+Deadlocks were not just a database issue — they were actively disrupting business operations and workflow execution.
 
 ---
 
@@ -42,6 +56,20 @@ Deadlocks are tracked by identifying **deadlock victims** from Extended Events d
 - Stores a processing watermark  
 - Compares counts between intervals  
 - Triggers alerts when thresholds are exceeded  
+
+---
+
+### 🔍 Foundational Analysis
+
+Before implementing this monitoring system, deadlock activity was analyzed using a query against Extended Events (`system_health`).
+
+This analysis provided:
+
+- Visibility into deadlock frequency over time  
+- Per-database breakdown of occurrences  
+- Identification of high-impact workloads  
+
+➡️ See: [Deadlock Analysis Query](./08-deadlock-analysis-query.md)
 
 ---
 
@@ -188,11 +216,15 @@ Alerts include:
 
 ## 📊 Outcome
 
-This system enables:
+Following analysis, remediation, and implementation of this monitoring system:
 
-- Detection of deadlock trends over time  
-- Early identification of contention issues  
-- Actionable alerting with detailed context  
+- Deadlocks reduced from ~2,000/day to near zero  
+- ~20 total deadlocks observed over a 3-month period  
+- 0 deadlocks observed in the most recent 5-day window  
+- Significant reduction in application errors and incident volume  
+- Improved system stability and job processing reliability  
+
+This system enabled both **proactive detection** and **long-term prevention** of deadlock-related issues. 
 
 ---
 
