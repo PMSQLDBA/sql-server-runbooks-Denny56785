@@ -1,6 +1,6 @@
 # SQL Server Runbooks & Technical Documentation Portfolio
 
-> **Production-grade SQL Server monitoring, alerting, and operational runbooks built from real-world environments.**
+> **Technical Operations portfolio focused on reliability, performance, and production stability — using SQL Server as a core system component.**
 
 ## 👤 Author  
 Dennis Lubins  
@@ -11,6 +11,8 @@ Technical Operations & Runbook Portfolio
 ## 📌 Overview
 
 This repository showcases real-world SQL Server runbooks and technical documentation built from hands-on experience stabilizing, monitoring, and operating production database environments.
+
+> While centered on SQL Server, this portfolio reflects broader **technical operations and system reliability practices** — including monitoring design, incident response, and maintenance strategy.
 
 The focus is not just documentation — but **designing operational systems** that improve:
 
@@ -97,6 +99,7 @@ These represent high-impact, production-grade solutions that demonstrate system 
 ## 🎯 What This Portfolio Demonstrates
 
 - Designing **monitoring and alerting systems**, not just queries  
+- Improving **system reliability and operational stability**    
 - Translating complex incidents into **repeatable operational runbooks**  
 - Building **production-ready automation and workflows**  
 - Applying **noise reduction and alert tuning strategies**  
