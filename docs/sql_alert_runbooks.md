@@ -1,0 +1,2321 @@
+# SQL Server Agent Runbooks
+
+Reference guide for responding to SQL Server Agent alerts and SQL monitoring job notifications across production environments.
+
+> **For ⚠️ WARNING Alerts:** Focus on identifying patterns rather than reacting immediately. Perform initial checks, then monitor behavior over time — many alerts are benign one-offs (e.g., Disk Latency). If alerts continue, evaluate whether monitoring thresholds need adjustment or further action is needed.
+
+> **Maintenance Windows:** Alerts that occur during scheduled maintenance windows (commonly overnight, e.g., 12am–3am) may be expected depending on workload activity.
+
+---
+
+## Table of Contents
+
+### SQL Server Agent Alerts
+
+| # | Alert | Severity | Category |
+|---|-------|----------|----------|
+| 1 | [Severity 19 — Fatal Error in Current Process](#severity-19--fatal-error-in-current-process) | 🔴 Critical | Fatal Errors |
+| 2 | [Severity 20 — Fatal Error, Connection Terminated](#severity-20--fatal-error--connection-terminated) | 🔴 Critical | Fatal Errors |
+| 3 | [Severity 21 — Fatal Error Affecting Database Processes](#severity-21--fatal-error-affecting-database-processes) | 🔴 Critical | Fatal Errors |
+| 4 | [Severity 22 — Table Integrity Corruption](#severity-22--table-integrity-corruption) | 🔴 Critical | I/O & Storage |
+| 5 | [Severity 23 — Database Integrity Corruption](#severity-23--database-integrity-corruption) | 🔴 Critical | I/O & Storage |
+| 6 | [Severity 24 — Hardware or Disk I/O Error](#severity-24--hardware-or-disk-io-error) | 🔴 Critical | I/O & Storage |
+| 7 | [Severity 25 — System-Level Failure](#severity-25--system-level-failure) | 🔴 Critical | Fatal Errors |
+| 8 | [Error 823 — I/O Error, Disk/Subsystem Failure](#error-823--io-error--disksubsystem-failure) | 🔴 Critical | I/O & Storage |
+| 9 | [Error 824 — Logical Consistency I/O Error](#error-824--logical-consistency-io-error) | 🔴 Critical | I/O & Storage |
+| 10 | [Error 825 — Read Retry Warning, Storage Risk](#error-825--read-retry-warning--storage-risk) | 🟡 High | I/O & Storage |
+| 11 | [Error 9002 — Transaction Log Full](#error-9002--transaction-log-full) | 🟡 High | Transaction Log |
+| 12 | [Error 9001 — Transaction Log Not Available](#error-9001--transaction-log-not-available) | 🔴 Critical | Transaction Log |
+| 13 | [Error 3414 — Database Recovery Problem](#error-3414--database-recovery-problem) | 🔴 Critical | Fatal Errors |
+| 14 | [Error 701 — Insufficient Memory for Query Execution](#error-701--insufficient-memory-for-query-execution) | 🟡 High | Memory |
+| 15 | [Error 802 — Insufficient Memory, Buffer Pool Pressure](#error-802--insufficient-memory--buffer-pool-pressure) | 🟡 High | Memory |
+| 16 | [Error 8645 — Timeout Waiting for Memory Grant](#error-8645--timeout-waiting-for-memory-grant) | 🟡 High | Memory |
+| 17 | [Error 17187 — Could Not Allocate Memory, Instance Level](#error-17187--could-not-allocate-memory--instance-level) | 🔴 Critical | Memory |
+| 18 | [Error 17883 — Non-Yielding Scheduler](#error-17883--non-yielding-scheduler) | 🔴 Critical | Fatal Errors |
+
+### SQL Monitor Jobs
+
+| # | Job | Severity | Category |
+|---|-----|----------|----------|
+| 1 | [DBA - Autogrowth Monitor](#dba---autogrowth-monitor) | 🟢 Warning | I/O & Storage |
+| 2 | [DBA - Blocking Monitor](#dba---blocking-monitor) | 🟢 Warning | Blocking |
+| 3 | [DBA - Deadlock Monitor](#dba---deadlock-monitor) | 🟢 Warning | Blocking |
+| 4 | [DBA - Disk Latency Alert Monitor](#dba---disk-latency-alert-monitor) | 🟢 Warning | I/O & Storage |
+| 5 | [DBA - Disk Latency Snapshot Collector](#dba---disk-latency-snapshot-collector) | 🟢 Warning | Operational |
+| 6 | [DBA - Disk Latency Snapshot Cleanup](#dba---disk-latency-snapshot-cleanup) | 🟢 Warning | Operational |
+| 7 | [DBA - Replication Health Monitor](#dba---replication-health-monitor) | 🔴 Critical | Replication |
+| 8 | [DBA - TempDB Space Monitor](#dba---tempdb-space-monitor) | 🟡 High | I/O & Storage |
+| 9 | [SQL Agent Job Failure](#sql-agent-job-failure) | 🔴 Critical | Operational |
+
+---
+
+## SQL Server Agent Alerts
+
+---
+
+### Severity 19 — Fatal Error in Current Process
+
+**Severity:** 🔴 Critical | **Category:** Fatal Errors
+
+> Non-resource error; current process terminates.
+
+#### What This Alert Means
+
+Severity 19 indicates a fatal error that is not caused by a resource shortage. The error terminates the current user connection but does not affect other sessions or the SQL Server service itself. These are unexpected, non-recoverable errors within a single process.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Unsupported or out-of-range SQL features called at runtime | The affected session is terminated and its transactions rolled back |
+| Bugs in stored procedures or triggers causing unexpected execution paths | Application will throw a connection error or exception |
+| Stack overflows within deep recursion or complex query plans | Other connections and databases are unaffected |
+| Driver or client-library incompatibilities sending malformed requests | |
+
+#### What to Investigate
+
+- Check the SQL Server Error Log for the full error text and error number associated with severity 19
+- Identify the login, application name, and host from `sys.dm_exec_sessions` or the error log around the time of the alert
+- Review the query or stored procedure that was executing — check for recursion depth, unsupported syntax, or recent code changes
+- Search for the specific error number in Microsoft documentation
+- If happening repeatedly for a specific workload, test that procedure in isolation in a non-prod environment
+
+#### SQL Queries
+
+**Find active sessions and their current query**
+```sql
+SELECT s.session_id, s.login_name, s.host_name, s.program_name,
+       s.status, r.command, r.wait_type, r.wait_time,
+       t.text AS query_text
+FROM sys.dm_exec_sessions s
+LEFT JOIN sys.dm_exec_requests r ON s.session_id = r.session_id
+OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) t
+WHERE s.is_user_process = 1
+ORDER BY s.session_id;
+```
+
+**Check recent SQL Server error log entries**
+```sql
+EXEC xp_readerrorlog 0, 1, NULL, NULL, NULL, NULL, N'DESC';
+```
+
+**Find sessions with recent activity by login**
+```sql
+SELECT session_id, login_name, host_name, program_name,
+       last_request_start_time, last_request_end_time,
+       reads, writes, logical_reads
+FROM sys.dm_exec_sessions
+WHERE is_user_process = 1
+ORDER BY last_request_start_time DESC;
+```
+
+#### Follow-up Steps
+
+1. Document the exact error number from the log — severity 19 is a wrapper; the inner error number tells you the real cause
+2. If the error is tied to a specific stored procedure or query, review it for recent changes in source control
+3. Test the identified object in a non-production environment to reproduce and isolate the issue
+4. If no code changes preceded the error, check for SQL Server CU updates that address known bugs at that error number
+5. Set up an Extended Events session to capture future occurrences with full context (query text, plan, login, host) before they repeat
+6. Verify the application is handling connection loss gracefully and reconnecting — a retry without fixing the root cause will just repeat the error
+
+---
+
+### Severity 20 — Fatal Error — Connection Terminated
+
+**Severity:** 🔴 Critical | **Category:** Fatal Errors
+
+> Fatal error in a statement; connection forcibly closed.
+
+#### What This Alert Means
+
+Severity 20 is a fatal error in the current statement. The connection is forcibly terminated by SQL Server. This may indicate a serious issue with how a query or command was processed, or a malformed client request.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Invalid or corrupt network packets from the client | The connection is immediately and forcibly terminated |
+| Internal SQL Server processing errors during statement execution | Any open transaction is rolled back |
+| Bugs or edge cases in query plan execution | Application experiences an abrupt connection loss |
+| Incompatible or malformed client requests (e.g., older ODBC/OLE DB drivers) | Repeated occurrences could indicate systemic driver or application issues |
+
+#### What to Investigate
+
+- Review the SQL Server Error Log for the specific error number paired with severity 20
+- Check the Windows Event Log for correlated entries
+- Look at `sys.dm_exec_connections` for patterns — same host or application repeating the issue
+- Evaluate client driver versions and connection string settings
+
+#### SQL Queries
+
+**Find connections by host/app — look for repeating offenders**
+```sql
+SELECT c.session_id, c.client_net_address, c.auth_scheme,
+       c.net_transport, c.protocol_type,
+       s.login_name, s.host_name, s.program_name,
+       s.last_request_start_time
+FROM sys.dm_exec_connections c
+JOIN sys.dm_exec_sessions s ON c.session_id = s.session_id
+WHERE s.is_user_process = 1
+ORDER BY s.host_name, s.program_name;
+```
+
+**Check error log for severity 20 entries**
+```sql
+EXEC xp_readerrorlog 0, 1, N'severity 20';
+```
+
+**Review ring buffer connectivity events**
+```sql
+SELECT CAST(record AS XML) AS record_xml,
+       record_id
+FROM sys.dm_os_ring_buffers
+WHERE ring_buffer_type = N'RING_BUFFER_CONNECTIVITY'
+ORDER BY record_id DESC;
+```
+
+#### Follow-up Steps
+
+1. Identify whether a single application, host, or login is repeatedly triggering severity 20 — isolate that workload first
+2. Upgrade client drivers (ODBC, OLE DB, JDBC) to the latest version supported for your SQL Server version
+3. If a specific query is implicated, capture its execution plan and review for anomalies
+4. Enable trace flag 4029 to log additional details about malformed client packets
+5. Coordinate with the application team to add connection retry logic and proper error handling
+6. If the issue persists after driver updates, open a case with the application vendor or Microsoft CSS
+
+---
+
+### Severity 21 — Fatal Error Affecting Database Processes
+
+**Severity:** 🔴 Critical | **Category:** Fatal Errors
+
+> Affects all processes in a database.
+
+#### What This Alert Means
+
+Severity 21 indicates a fatal error that affects all processes in the current database. This signals a problem at the database level and may require DBA intervention to assess and recover the database.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Database-level resource exhaustion | All active connections within the affected database may be terminated |
+| Corruption in a system table or critical page within the database | In-flight transactions are rolled back |
+| Internal SQL Server errors affecting shared database resources | Application-wide outage for any app relying on that database |
+| Rare SQL Server engine code path bugs | May require database restart or recovery to stabilize |
+
+#### What to Investigate
+
+- Check the SQL Server Error Log and Windows Event Log for the exact error number
+- Run `DBCC CHECKDB` on the affected database
+- Check `sys.databases` for the state of the affected database
+- Review recent schema changes, large batch operations, or deployments
+- Alert on-call DBA — severity 21 with no clear cause warrants immediate escalation
+
+#### SQL Queries
+
+**Check database states**
+```sql
+SELECT name, state_desc, recovery_model_desc,
+       log_reuse_wait_desc, is_read_only,
+       create_date, compatibility_level
+FROM sys.databases
+ORDER BY name;
+```
+
+**Check for active transactions in the database**
+```sql
+SELECT s.session_id, s.login_name, s.host_name,
+       t.transaction_begin_time,
+       DATEDIFF(MINUTE, t.transaction_begin_time, GETDATE()) AS duration_min,
+       r.command, r.wait_type, r.blocking_session_id
+FROM sys.dm_exec_sessions s
+JOIN sys.dm_tran_session_transactions st ON s.session_id = st.session_id
+JOIN sys.dm_tran_active_transactions t ON st.transaction_id = t.transaction_id
+LEFT JOIN sys.dm_exec_requests r ON s.session_id = r.session_id
+ORDER BY t.transaction_begin_time;
+```
+
+**Run DBCC CHECKDB (read-only integrity check)**
+```sql
+-- Replace YourDatabase with the affected database name
+DBCC CHECKDB (N'YourDatabase') WITH NO_INFOMSGS, ALL_ERRORMSGS;
+```
+
+#### Follow-up Steps
+
+1. Run `DBCC CHECKDB` immediately and save the full output — this is your baseline for damage assessment
+2. If the database is SUSPECT, do not attempt online repair until you have confirmed backup availability
+3. Review the error chain in the log — severity 21 is almost always preceded by other errors that explain the root cause
+4. Engage your backup strategy: verify the most recent clean backup and how recent it is before deciding between repair and restore
+5. Notify application owners of the potential downtime scope
+6. After recovery, schedule a post-incident review to identify whether a code change, deployment, or job triggered the event
+
+---
+
+### Severity 22 — Table Integrity Corruption
+
+**Severity:** 🔴 Critical | **Category:** I/O & Storage
+
+> Fatal error: table or index page corrupted.
+
+#### What This Alert Means
+
+Severity 22 means SQL Server has detected that a table or index page in memory is corrupt. Data integrity has been compromised at the structural level. Immediate investigation and potential restore from backup may be required.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Hardware failure — faulty RAM causing bad page writes | Queries touching the corrupt table or index will fail |
+| Disk subsystem issues — failed drive, bad controller, or firmware bugs | Data loss is possible if corruption has propagated |
+| Storage driver or SAN/NAS firmware bugs causing silent data corruption | Application features depending on the affected table will be unavailable |
+| Improper shutdown or power loss corrupting in-flight I/O | May trigger cascade of 823/824 errors as SQL re-reads pages |
+
+#### What to Investigate
+
+- Run `DBCC CHECKDB WITH NO_INFOMSGS, ALL_ERRORMSGS` on the affected database immediately
+- Check if there are accompanying 823 or 824 errors in the error log
+- Check the Windows Event Log for disk controller errors
+- Validate storage hardware health — RAID status, disk S.M.A.R.T., SAN event logs
+- If corruption confirmed: assess DBCC REPAIR vs restore from backup
+
+#### SQL Queries
+
+**Run DBCC CHECKDB with full error output**
+```sql
+DBCC CHECKDB (N'YourDatabase')
+WITH NO_INFOMSGS, ALL_ERRORMSGS, DATA_PURITY;
+```
+
+**Check suspect pages table**
+```sql
+SELECT DB_NAME(database_id) AS database_name,
+       file_id, page_id, event_type,
+       error_count, last_update_date
+FROM msdb.dbo.suspect_pages
+ORDER BY last_update_date DESC;
+```
+
+**Identify object on a corrupt page**
+```sql
+-- Replace 1 with file_id and 12345 with page_id from the error
+DBCC PAGE (N'YourDatabase', 1, 12345, 3) WITH TABLERESULTS;
+```
+
+#### Follow-up Steps
+
+1. Save the complete `DBCC CHECKDB` output to a file before attempting any repair
+2. Check `msdb.dbo.suspect_pages` — SQL Server logs bad pages here automatically
+3. Verify backup chain: confirm your most recent clean backup and all subsequent log backups are intact
+4. If in FULL recovery, attempt `RESTORE DATABASE ... PAGE=` before a full restore
+5. If repair is necessary: `DBCC CHECKDB REPAIR_REBUILD` first (no data loss), only escalate to `REPAIR_ALLOW_DATA_LOSS` if required
+6. Replace or validate hardware after recovery — corruption will recur if the root hardware cause is not addressed
+7. Document all steps taken, errors found, and data impact for your post-incident report
+
+---
+
+### Severity 23 — Database Integrity Corruption
+
+**Severity:** 🔴 Critical | **Category:** I/O & Storage
+
+> Fatal error: database-wide integrity problem.
+
+#### What This Alert Means
+
+Severity 23 indicates database-wide integrity corruption — not limited to a single table. SQL Server has detected that the integrity of the entire database is suspect. This is an emergency-level alert requiring immediate DBA response.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Widespread hardware failure (failing disk, bad memory, failing HBA) | The entire database may become inaccessible |
+| Storage subsystem delivering corrupted writes (silent data corruption) | SQL Server may mark the database as SUSPECT |
+| SQL Server in an inconsistent state due to an ungraceful shutdown | All connected applications will lose access |
+| Corruption spread from severity 22-level issues that went unaddressed | Recovery may require full database restore from backup |
+
+#### What to Investigate
+
+- Verify database state immediately with `sys.databases`
+- Run `DBCC CHECKDB` — capture all output even if it fails partway
+- Check all hardware: disk health, RAID controller, memory diagnostics
+- Prepare to restore from the most recent verified clean backup
+- Engage your backup/DR plan — this is a potential data loss event
+
+#### SQL Queries
+
+**Check database state and recovery status**
+```sql
+SELECT name, state_desc, recovery_model_desc,
+       log_reuse_wait_desc, page_verify_option_desc,
+       is_auto_close_on, is_auto_shrink_on
+FROM sys.databases
+WHERE name NOT IN ('master','model','msdb','tempdb')
+ORDER BY name;
+```
+
+**Check suspect pages across all databases**
+```sql
+SELECT DB_NAME(database_id) AS database_name,
+       file_id, page_id, event_type, error_count,
+       last_update_date
+FROM msdb.dbo.suspect_pages
+ORDER BY last_update_date DESC;
+```
+
+**Check all database file paths and states**
+```sql
+SELECT db.name AS database_name, mf.file_id,
+       mf.type_desc, mf.physical_name,
+       mf.state_desc, mf.size * 8 / 1024 AS size_mb
+FROM sys.master_files mf
+JOIN sys.databases db ON mf.database_id = db.database_id
+ORDER BY db.name, mf.type_desc;
+```
+
+#### Follow-up Steps
+
+1. This is a P1 incident — escalate immediately to senior DBA and management
+2. Confirm backup availability: locate your most recent FULL backup plus all differential and log backups since
+3. If database is in SUSPECT state: use `SET EMERGENCY` mode only if you need to extract data before restore — understand this is destructive
+4. Execute your DR runbook for database restore to a verified clean restore point
+5. After restore: validate data with application team before returning to production
+6. Run `DBCC CHECKDB` on the restored database before going live
+7. Root cause the hardware issue before returning to production — do not restore onto the same failing hardware
+
+---
+
+### Severity 24 — Hardware or Disk I/O Error
+
+**Severity:** 🔴 Critical | **Category:** I/O & Storage
+
+> Fatal hardware error from disk subsystem.
+
+#### What This Alert Means
+
+Severity 24 indicates a hardware error, typically originating from the disk subsystem. SQL Server has received a failure response from the OS or storage layer when trying to read or write data. This is a physical I/O problem pointing at hardware or storage infrastructure.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Physical disk failure or imminent failure (bad sectors, head crash) | SQL Server cannot reliably read or write data |
+| RAID array degraded or in failed state | Database files may become inaccessible |
+| SAN/NAS path failure, HBA failure, or cable issues | Risk of data corruption if writes fail silently |
+| Disk controller firmware bugs or faulty controller card | SQL Server may take databases offline to protect integrity |
+
+#### What to Investigate
+
+- Check Windows Event Log (System) for disk, controller, SCSI, or Storport errors
+- Check RAID controller status — is the array degraded?
+- If using a SAN: check the management console for path failures or LUN errors
+- Validate disk health with vendor diagnostics
+
+#### SQL Queries
+
+**Check database file paths to identify affected volumes**
+```sql
+SELECT db.name AS database_name, mf.type_desc,
+       mf.physical_name, mf.state_desc,
+       mf.size * 8 / 1024 AS size_mb
+FROM sys.master_files mf
+JOIN sys.databases db ON mf.database_id = db.database_id
+ORDER BY mf.physical_name;
+```
+
+**Check I/O stall statistics per file**
+```sql
+SELECT DB_NAME(vfs.database_id) AS database_name,
+       vfs.file_id, mf.physical_name,
+       vfs.io_stall, vfs.io_stall_read_ms,
+       vfs.io_stall_write_ms, vfs.num_of_reads,
+       vfs.num_of_writes,
+       CAST(vfs.io_stall AS FLOAT) /
+         NULLIF(vfs.num_of_reads + vfs.num_of_writes, 0) AS avg_io_stall_ms
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) vfs
+JOIN sys.master_files mf
+  ON vfs.database_id = mf.database_id
+ AND vfs.file_id = mf.file_id
+ORDER BY vfs.io_stall DESC;
+```
+
+**Check suspect pages**
+```sql
+SELECT DB_NAME(database_id) AS database_name,
+       file_id, page_id, event_type, error_count,
+       last_update_date
+FROM msdb.dbo.suspect_pages
+ORDER BY last_update_date DESC;
+```
+
+#### Follow-up Steps
+
+1. Do not restart SQL Server until storage health is confirmed — an unclean restart on failing hardware risks further corruption
+2. Engage your storage team or hardware vendor immediately with the specific error details from the Windows Event Log
+3. If a RAID drive is failing: initiate hot-spare rebuild per your storage vendor SOP
+4. After storage is stabilized, run `DBCC CHECKDB` on all databases that were online at the time of the error
+5. Review and update your hardware monitoring — add proactive SMART and RAID health alerting if not already in place
+
+---
+
+### Severity 25 — System-Level Failure
+
+**Severity:** 🔴 Critical | **Category:** Fatal Errors
+
+> SQL Server or OS engine-level fatal failure.
+
+#### What This Alert Means
+
+Severity 25 is the highest severity level — a fatal system-level failure within SQL Server or the underlying OS. These errors typically require restarting SQL Server or the server itself. SQL Server can no longer guarantee the integrity of its own internal state.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Catastrophic hardware failure affecting the entire server | SQL Server service may crash or be forced to terminate |
+| Critical SQL Server engine bugs or access violations | All databases and connections on the instance are affected |
+| OS kernel panics or driver failures impacting SQL Server | Full instance outage — all applications lose connectivity |
+| Extreme resource starvation at the OS level | A minidump or Watson dump is typically generated for Microsoft support |
+
+#### What to Investigate
+
+- Check if SQL Server service restarted (Event ID 17148 or 17162 in Application event log)
+- Locate the SQL Server error log and look for the full severity 25 error message
+- Check for `.mdmp` or `SQLDump*.txt` files in the SQL Server LOG directory
+- Review Windows Event Log (System + Application) for OS-level errors
+- After recovery, run `DBCC CHECKDB` on all databases
+
+#### SQL Queries
+
+**Check SQL Server startup time — detect if it restarted**
+```sql
+SELECT sqlserver_start_time,
+       DATEDIFF(MINUTE, sqlserver_start_time, GETDATE()) AS minutes_since_start
+FROM sys.dm_os_sys_info;
+```
+
+**Check all database states post-restart**
+```sql
+SELECT name, state_desc, recovery_model_desc,
+       log_reuse_wait_desc, is_read_only
+FROM sys.databases
+ORDER BY state_desc, name;
+```
+
+**Search error log for dump file references**
+```sql
+EXEC xp_readerrorlog 0, 1, N'dump';
+EXEC xp_readerrorlog 0, 1, N'SQLDump';
+```
+
+#### Follow-up Steps
+
+1. Preserve any crash dump files (`.mdmp`, `SQLDump*.txt`) from the SQL Server LOG directory before they are overwritten
+2. If this is a repeating crash: open a case with Microsoft CSS and provide the dump files
+3. Run `DBCC CHECKDB` on all user databases after the service comes back up
+4. Verify all SQL Agent jobs completed or were cleanly restarted — crash may have orphaned in-progress jobs
+5. Review Windows Event Log for any OS-level driver or kernel errors that preceded the SQL crash
+6. If this is the first occurrence with no clear cause: patch SQL Server to the latest CU and monitor closely
+
+---
+
+### Error 823 — I/O Error — Disk/Subsystem Failure
+
+**Severity:** 🔴 Critical | **Category:** I/O & Storage
+
+> SQL could not complete an I/O request.
+
+#### What This Alert Means
+
+Error 823 is raised when SQL Server issues an I/O request to the OS and the OS returns a hard failure. This is a confirmed physical or subsystem-level I/O failure. SQL Server treats this as a hardware problem.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Physical disk failure or bad sectors | The database owning the affected file may be taken offline |
+| SAN/NAS infrastructure failure — path failures, LUN errors, controller failure | Applications reading/writing that database will fail |
+| RAID array degraded or in failed state | Risk of data loss if write failures occur |
+| Disk driver crash or firmware bug | May trigger 9001 or database SUSPECT state |
+
+#### What to Investigate
+
+- Check Windows Event Log (System) for Disk, Storport, or disk controller errors
+- Check the SQL Server error log for the specific file path in the 823 error
+- Check RAID/SAN health immediately
+- Run vendor storage diagnostics on the affected physical disk
+
+#### SQL Queries
+
+**Check I/O stall stats — find the slow or failing file**
+```sql
+SELECT DB_NAME(vfs.database_id) AS database_name,
+       mf.physical_name, vfs.file_id,
+       vfs.io_stall_read_ms, vfs.io_stall_write_ms,
+       vfs.io_stall, vfs.num_of_reads, vfs.num_of_writes,
+       CAST(vfs.io_stall AS FLOAT) /
+         NULLIF(vfs.num_of_reads + vfs.num_of_writes, 0) AS avg_stall_ms
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) vfs
+JOIN sys.master_files mf
+  ON vfs.database_id = mf.database_id
+ AND vfs.file_id = mf.file_id
+ORDER BY vfs.io_stall DESC;
+```
+
+**Check suspect pages table**
+```sql
+SELECT DB_NAME(database_id) AS database_name,
+       file_id, page_id, event_type, error_count,
+       last_update_date
+FROM msdb.dbo.suspect_pages
+ORDER BY last_update_date DESC;
+```
+
+#### Follow-up Steps
+
+1. Identify the exact file and volume from the 823 error message — bring that to your storage team immediately
+2. After hardware is stabilized: attempt `RESTORE DATABASE ... PAGE=` for any pages in `msdb.dbo.suspect_pages` if in FULL recovery
+3. If page-level restore is not possible: perform a full database restore
+4. After restore: run `DBCC CHECKDB` to confirm integrity before returning to production
+5. Add proactive I/O latency monitoring to catch storage degradation before it becomes a hard failure
+
+---
+
+### Error 824 — Logical Consistency I/O Error
+
+**Severity:** 🔴 Critical | **Category:** I/O & Storage
+
+> Page read succeeded but data is logically inconsistent.
+
+#### What This Alert Means
+
+Error 824 is raised when SQL Server reads a page from disk successfully at the I/O level, but the page fails internal logical consistency checks (bad checksum, torn page, unexpected page ID). The data was written incorrectly or silently corrupted in transit.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Silent data corruption in the storage subsystem (SAN firmware bugs, faulty disk controller) | The affected page and any data on it may be inaccessible or corrupt |
+| Faulty RAM causing incorrect data to be written to disk | `DBCC CHECKDB` will report consistency errors |
+| Torn pages from an ungraceful shutdown without page checksums enabled | Applications accessing the corrupt page will receive errors |
+| Virtualization layer issues causing incorrect writes | Potential data loss if the page cannot be repaired |
+
+#### What to Investigate
+
+- Note the database, file, and page ID from the 824 error message
+- Run `DBCC CHECKDB` on the affected database
+- Check Windows Event Log for any storage hardware warnings
+- Enable page checksums if not already on
+- Check for bad RAM with vendor memory diagnostics
+
+#### SQL Queries
+
+**Check if page checksums are enabled on all databases**
+```sql
+SELECT name, page_verify_option_desc
+FROM sys.databases
+ORDER BY name;
+-- If not CHECKSUM, enable with:
+-- ALTER DATABASE YourDatabase SET PAGE_VERIFY CHECKSUM WITH NO_WAIT;
+```
+
+**Check suspect pages flagged by SQL Server**
+```sql
+SELECT DB_NAME(database_id) AS database_name,
+       file_id, page_id, event_type, error_count,
+       last_update_date
+FROM msdb.dbo.suspect_pages
+WHERE event_type IN (1, 2, 3)
+ORDER BY last_update_date DESC;
+```
+
+**Run DBCC CHECKDB with data purity check**
+```sql
+DBCC CHECKDB (N'YourDatabase')
+WITH NO_INFOMSGS, ALL_ERRORMSGS, DATA_PURITY;
+```
+
+#### Follow-up Steps
+
+1. Enable `PAGE_VERIFY CHECKSUM` on all databases if not already set
+2. Run Windows Memory Diagnostic or vendor RAM test to rule out faulty memory causing bad writes
+3. If this is a VM: engage your virtualization team to check the storage driver and hypervisor I/O path integrity
+4. Attempt page-level restore (`RESTORE DATABASE ... PAGE=`) if in FULL recovery model with a valid backup
+5. If page-level restore fails: perform full database restore
+6. After restore: re-run `DBCC CHECKDB` to confirm no further corruption exists
+7. A second 824 on the same instance is an urgent escalation signal — do not treat it as a one-off
+
+---
+
+### Error 825 — Read Retry Warning — Storage Risk
+
+**Severity:** 🟡 High | **Category:** I/O & Storage
+
+> SQL had to retry a disk read; storage degrading.
+
+#### What This Alert Means
+
+Error 825 is a warning — SQL Server had to retry a read after an initial failure, and the retry succeeded. No data loss has occurred, but this is a leading indicator of impending hardware failure and should be treated urgently.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Disk or storage subsystem beginning to fail (early-stage bad sectors) | No immediate data loss — reads eventually succeeded |
+| RAID array with a degraded drive causing read retries | Performance degradation due to retry overhead |
+| SAN path instability causing intermittent I/O failures | If the underlying issue worsens, 823/824 errors will follow |
+| Overloaded storage causing timeouts resolved on retry | Treat as hardware pre-failure |
+
+#### What to Investigate
+
+- Check the error log for the file path and page number in the 825 error
+- Immediately check storage health: RAID array status, SAN path health, disk S.M.A.R.T.
+- Monitor for increasing frequency of 825 errors
+- Run `DBCC CHECKDB` to get a baseline integrity snapshot
+
+#### SQL Queries
+
+**Check I/O stall stats — find files with high read latency**
+```sql
+SELECT DB_NAME(vfs.database_id) AS database_name,
+       mf.physical_name, mf.type_desc,
+       vfs.io_stall_read_ms, vfs.num_of_reads,
+       CASE WHEN vfs.num_of_reads = 0 THEN 0
+            ELSE vfs.io_stall_read_ms / vfs.num_of_reads
+       END AS avg_read_ms,
+       vfs.io_stall_write_ms, vfs.num_of_writes,
+       CASE WHEN vfs.num_of_writes = 0 THEN 0
+            ELSE vfs.io_stall_write_ms / vfs.num_of_writes
+       END AS avg_write_ms
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) vfs
+JOIN sys.master_files mf
+  ON vfs.database_id = mf.database_id
+ AND vfs.file_id = mf.file_id
+ORDER BY avg_read_ms DESC;
+```
+
+**Scan error log for 825 frequency across log files**
+```sql
+EXEC xp_readerrorlog 0, 1, N'825';
+EXEC xp_readerrorlog 1, 1, N'825';
+EXEC xp_readerrorlog 2, 1, N'825';
+```
+
+#### Follow-up Steps
+
+1. Track the frequency of 825 errors over time — escalating frequency means you have hours to days, not weeks
+2. Alert your storage team within 24 hours — hardware inspection is warranted even if all reads are currently succeeding
+3. Run `DBCC CHECKDB` now as a baseline — know the current integrity state before it potentially worsens
+4. Plan a storage maintenance window to swap out suspect hardware before a hard failure forces an emergency
+5. Ensure your backup chain is healthy and tested — you want a confirmed restorable backup before this becomes a crisis
+
+---
+
+### Error 9002 — Transaction Log Full
+
+**Severity:** 🟡 High | **Category:** Transaction Log
+
+> Cannot write to log — log is full.
+
+#### What This Alert Means
+
+Error 9002 is raised when SQL Server cannot write to the transaction log because it is full. All write activity in the affected database is blocked until log space is freed. This is one of the most common operational SQL Server issues.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| No log backup has run recently so the log cannot be reused (most common in FULL recovery) | All write transactions (INSERT, UPDATE, DELETE) are blocked |
+| A long-running or uncommitted transaction is holding the log open | Applications receive errors for any DML operations |
+| Auto-growth is disabled or the disk is full | The database is effectively read-only until log space is freed |
+| Replication or mirroring not consuming the log, blocking truncation | |
+
+#### What to Investigate
+
+- Query log usage with `DBCC SQLPERF`
+- Identify why the log cannot be truncated via `log_reuse_wait_desc`
+- Find long-running transactions via `sys.dm_tran_active_transactions`
+- For immediate relief: run a log backup if in FULL recovery
+
+#### SQL Queries
+
+**Check log space usage across all databases**
+```sql
+DBCC SQLPERF(LOGSPACE);
+```
+
+**Find why the log cannot be truncated**
+```sql
+SELECT name, log_reuse_wait_desc, recovery_model_desc,
+       size * 8.0 / 1024 AS log_size_mb,
+       FILEPROPERTY(name, 'SpaceUsed') * 8.0 / 1024 AS log_used_mb
+FROM sys.databases
+ORDER BY name;
+```
+
+**Find long-running active transactions**
+```sql
+SELECT s.session_id, s.login_name, s.host_name,
+       s.program_name, t.transaction_begin_time,
+       DATEDIFF(MINUTE, t.transaction_begin_time, GETDATE()) AS open_minutes,
+       r.command, r.wait_type,
+       qt.text AS query_text
+FROM sys.dm_exec_sessions s
+JOIN sys.dm_tran_session_transactions st ON s.session_id = st.session_id
+JOIN sys.dm_tran_active_transactions t ON st.transaction_id = t.transaction_id
+LEFT JOIN sys.dm_exec_requests r ON s.session_id = r.session_id
+OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) qt
+ORDER BY t.transaction_begin_time;
+```
+
+**Check log file size and autogrowth settings**
+```sql
+SELECT db.name AS database_name,
+       mf.physical_name,
+       mf.size * 8 / 1024 AS current_size_mb,
+       CASE mf.max_size WHEN -1 THEN 'Unlimited'
+         ELSE CAST(mf.max_size * 8 / 1024 AS VARCHAR) + ' MB' END AS max_size,
+       CASE mf.is_percent_growth WHEN 1 THEN CAST(mf.growth AS VARCHAR) + '%'
+         ELSE CAST(mf.growth * 8 / 1024 AS VARCHAR) + ' MB' END AS autogrowth
+FROM sys.master_files mf
+JOIN sys.databases db ON mf.database_id = db.database_id
+WHERE mf.type_desc = 'LOG'
+ORDER BY db.name;
+```
+
+#### Follow-up Steps
+
+1. **Immediate fix:** if `log_reuse_wait_desc` is `LOG_BACKUP`, run a log backup right now — fastest resolution in most cases
+2. If a long-running transaction is the cause: identify the session and coordinate with the app team before killing it
+3. Review and fix log backup job schedules — log backups should run every 15–60 minutes for active databases
+4. Set fixed-size autogrowth increments (e.g., 512 MB or 1 GB) — avoid percent-based growth
+5. Set up a disk space alert at 75% and 85% full thresholds on the log volume
+6. If replication is the cause: check replication latency and resolve any distributor delays
+
+---
+
+### Error 9001 — Transaction Log Not Available
+
+**Severity:** 🔴 Critical | **Category:** Transaction Log
+
+> Log file missing, offline, or inaccessible.
+
+#### What This Alert Means
+
+Error 9001 is raised when SQL Server cannot access the transaction log file. Without the log, SQL Server cannot guarantee transactional integrity. If this occurs at startup, recovery will fail, triggering 3414.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Transaction log file (.LDF) is on a volume that is offline or dismounted | All write operations to the database are blocked |
+| LDF file was accidentally deleted or moved | Database may be taken offline by SQL Server |
+| Storage failure causing the log volume to become inaccessible | Recovery at next startup will fail if the log is not accessible |
+| Disk full preventing any writes to the log volume | Applications will experience full write outage on the affected database |
+
+#### What to Investigate
+
+- Verify the LDF file exists at the path listed in `sys.master_files`
+- Check if the volume hosting the LDF is online and writable
+- Check for disk space on the log volume via `xp_fixeddrives`
+- Check Windows Event Log for file system or disk errors on the log volume
+
+#### SQL Queries
+
+**Check log file paths and current states**
+```sql
+SELECT db.name AS database_name,
+       mf.file_id, mf.physical_name,
+       mf.state_desc, mf.type_desc,
+       mf.size * 8 / 1024 AS size_mb
+FROM sys.master_files mf
+JOIN sys.databases db ON mf.database_id = db.database_id
+WHERE mf.type_desc = 'LOG'
+ORDER BY db.name;
+```
+
+**Scan error log for 9001 entries**
+```sql
+EXEC xp_readerrorlog 0, 1, N'9001';
+EXEC xp_readerrorlog 0, 1, N'log is not available';
+```
+
+**Check drive free space**
+```sql
+EXEC xp_fixeddrives;
+-- Results show free MB per drive letter
+-- Cross-reference with log file drive from sys.master_files
+```
+
+#### Follow-up Steps
+
+1. If the log volume came back online: SQL Server may recover automatically — monitor `sys.databases` for the database reaching ONLINE state
+2. If the LDF file is missing and no backup exists: this is a data loss scenario — engage management immediately
+3. If disk space was the cause: free space immediately, then monitor log backup frequency to prevent recurrence
+4. Review log file placement: critical databases should have LDF files on separate, monitored volumes
+5. Set up a proactive disk space alert at 75% and 85% thresholds on all volumes hosting SQL Server files
+
+---
+
+### Error 3414 — Database Recovery Problem
+
+**Severity:** 🔴 Critical | **Category:** Fatal Errors
+
+> Recovery failed; database may be SUSPECT.
+
+#### What This Alert Means
+
+Error 3414 indicates SQL Server encountered a fatal error during database recovery — the process that rolls forward committed transactions and rolls back uncommitted ones at startup. When recovery fails, the database is marked SUSPECT and cannot be brought online.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Transaction log corruption preventing redo or undo operations | The affected database will be inaccessible — SUSPECT or RECOVERY_PENDING state |
+| Database file corruption affecting pages needed during recovery | All applications relying on this database will fail to connect |
+| Log file is missing, detached, or inaccessible | Recovery cannot proceed automatically — DBA intervention required |
+| Disk I/O errors during the recovery process | Data loss is possible depending on the point at which recovery failed |
+
+#### What to Investigate
+
+- Check database state via `sys.databases`
+- Review the full SQL Server error log at startup for the chain of errors preceding 3414
+- Check if database files (MDF, NDF, LDF) are all present and accessible on disk
+- Best path: restore from most recent verified backup
+
+#### SQL Queries
+
+**Check database state and recovery status**
+```sql
+SELECT name, state_desc, recovery_model_desc,
+       log_reuse_wait_desc, is_read_only,
+       user_access_desc
+FROM sys.databases
+ORDER BY state_desc DESC, name;
+```
+
+**Verify all database files are present**
+```sql
+SELECT db.name AS database_name,
+       mf.file_id, mf.type_desc,
+       mf.state_desc, mf.physical_name,
+       mf.size * 8 / 1024 AS size_mb
+FROM sys.master_files mf
+JOIN sys.databases db ON mf.database_id = db.database_id
+ORDER BY db.name, mf.type_desc;
+```
+
+**Search error log for recovery chain**
+```sql
+EXEC xp_readerrorlog 0, 1, N'3414';
+EXEC xp_readerrorlog 0, 1, N'recovery';
+```
+
+**EMERGENCY mode repair — LAST RESORT only**
+```sql
+-- CAUTION: Use only if no backup exists. May cause permanent data loss.
+ALTER DATABASE YourDatabase SET EMERGENCY;
+ALTER DATABASE YourDatabase SET SINGLE_USER;
+DBCC CHECKDB (N'YourDatabase', REPAIR_ALLOW_DATA_LOSS);
+```
+
+#### Follow-up Steps
+
+1. Before any repair attempt: confirm your backup situation — when was the last clean backup? Are all log backups since then available?
+2. If restoring: restore FULL backup, then apply all differential and log backups in sequence
+3. Only use EMERGENCY mode + `REPAIR_ALLOW_DATA_LOSS` if you have no backup and no other option — this may permanently delete data
+4. After recovery: run `DBCC CHECKDB` to validate the restored database is clean
+5. Review your startup recovery monitoring — alert on any database not reaching ONLINE state within N minutes of SQL Server startup
+
+---
+
+### Error 701 — Insufficient Memory for Query Execution
+
+**Severity:** 🟡 High | **Category:** Memory
+
+> Cannot allocate memory for query; out of memory.
+
+#### What This Alert Means
+
+Error 701 is raised when SQL Server cannot allocate enough memory to execute a query. SQL Server's buffer pool or query workspace memory is exhausted or unavailable for the requested operation.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| SQL Server max server memory set too low for the workload | Individual queries fail with error 701 |
+| Large memory-intensive operations (sorts, hashes, parallel queries) consuming available workspace | Affected transactions are rolled back |
+| Memory leak in a query plan or extended stored procedure | Persistent 701 errors indicate a systemic memory problem |
+| Other processes on the server consuming memory SQL Server expected to use | |
+
+#### What to Investigate
+
+- Check current memory usage via `sys.dm_os_process_memory`
+- Review memory clerks for unexpected large consumers
+- Check max server memory setting vs actual physical RAM
+- Identify top memory-consuming queries from `sys.dm_exec_query_stats`
+
+#### SQL Queries
+
+**Check SQL Server process memory usage**
+```sql
+SELECT physical_memory_in_use_kb / 1024 AS physical_mem_used_mb,
+       locked_page_allocations_kb / 1024 AS locked_pages_mb,
+       memory_utilization_percentage,
+       page_fault_count
+FROM sys.dm_os_process_memory;
+```
+
+**Check memory clerks — find large consumers**
+```sql
+SELECT TOP 20 type, name,
+       pages_kb / 1024 AS pages_mb,
+       virtual_memory_committed_kb / 1024 AS virtual_mb
+FROM sys.dm_os_memory_clerks
+ORDER BY pages_kb DESC;
+```
+
+**Check max server memory setting**
+```sql
+SELECT name, value_in_use AS current_value_mb, description
+FROM sys.configurations
+WHERE name IN ('max server memory (MB)', 'min server memory (MB)')
+ORDER BY name;
+```
+
+#### Follow-up Steps
+
+1. If max server memory is lower than recommended: increase it — leave at least 4 GB for the OS on dedicated servers
+2. If non-SQL processes are consuming significant RAM: identify them and remove unnecessary services from the SQL Server host
+3. Tune the top memory-consuming queries — look for missing indexes that force large hash or sort operations
+4. Enable Resource Governor if multiple workloads compete for memory
+5. Add a Performance Monitor alert for Memory Grants Pending > 0 sustained for more than 60 seconds
+
+---
+
+### Error 802 — Insufficient Memory — Buffer Pool Pressure
+
+**Severity:** 🟡 High | **Category:** Memory
+
+> Buffer pool cannot allocate memory pages.
+
+#### What This Alert Means
+
+Error 802 indicates SQL Server cannot find sufficient pages in the buffer pool to satisfy a request. It specifically concerns the buffer pool that caches data pages, and signals severe memory pressure at the instance level.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Buffer pool is fully committed and cannot satisfy additional page requests | Page reads from disk increase dramatically — cache hit ratio drops |
+| Lock pages in memory is not configured and memory is being paged out by the OS | Query performance degrades severely |
+| Extremely high concurrent demand causing buffer pool contention | In severe cases, SQL Server may become unresponsive |
+| Non-SQL Server processes taking memory from the OS pool | |
+
+#### What to Investigate
+
+- Check Page Life Expectancy (PLE) — below 300s per 4 GB of RAM is a concern
+- Check if Lock Pages in Memory is enabled
+- Identify if a specific workload spike caused this
+
+#### SQL Queries
+
+**Check Page Life Expectancy (PLE)**
+```sql
+SELECT object_name, counter_name, cntr_value AS ple_seconds
+FROM sys.dm_os_performance_counters
+WHERE counter_name = N'Page life expectancy'
+  AND object_name LIKE '%Buffer Manager%';
+-- Rule: PLE > (SQL_RAM_GB * 75) seconds is healthy
+```
+
+**Check buffer pool and cache hit ratio**
+```sql
+SELECT object_name, counter_name, cntr_value
+FROM sys.dm_os_performance_counters
+WHERE object_name LIKE '%Buffer Manager%'
+  AND counter_name IN (
+    'Buffer cache hit ratio', 'Page reads/sec',
+    'Lazy writes/sec', 'Free pages'
+  )
+ORDER BY counter_name;
+```
+
+**Check if Lock Pages in Memory is active**
+```sql
+SELECT sql_memory_model_desc
+FROM sys.dm_os_sys_info;
+-- CONVENTIONAL = LPIM not enabled
+-- LOCK_PAGES   = LPIM enabled (recommended for production)
+```
+
+#### Follow-up Steps
+
+1. Enable Lock Pages in Memory (LPIM) for the SQL Server service account via Local Security Policy if not already enabled
+2. Verify max server memory is set appropriately — not too high (starves OS) or too low (starves SQL)
+3. Review PLE trend over time — chronically low PLE means memory is insufficient for the working set
+4. If a large report or batch job is flushing the buffer pool during business hours: schedule it off-hours or use Resource Governor
+5. Consider adding more RAM or splitting workloads if memory pressure is persistent
+
+---
+
+### Error 8645 — Timeout Waiting for Memory Grant
+
+**Severity:** 🟡 High | **Category:** Memory
+
+> Query waited too long for a memory grant and was killed.
+
+#### What This Alert Means
+
+Error 8645 occurs when a query has been waiting for a memory grant — the reserved workspace for sort, hash, or parallel operations — for longer than the timeout (default 25 seconds). The query is terminated. This indicates memory grant contention.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| High concurrency of memory-intensive queries all requesting grants simultaneously | The timed-out query receives an error and is terminated |
+| Inaccurate cardinality estimates causing oversized memory grant requests | Application receives a query failure — transactions rolled back |
+| Insufficient max server memory allocated to SQL Server | Query queue depth grows, contributing to further latency |
+| Single large query holding a grant while others queue behind it | |
+
+#### What to Investigate
+
+- Check Memory Grants Pending counter from `sys.dm_os_performance_counters`
+- Identify which queries are holding large memory grants
+- Check cardinality estimates — update statistics if inaccurate
+- Consider implementing Resource Governor
+
+#### SQL Queries
+
+**Check memory grants pending and outstanding**
+```sql
+SELECT counter_name, cntr_value
+FROM sys.dm_os_performance_counters
+WHERE object_name LIKE '%Memory Manager%'
+  AND counter_name IN (
+    'Memory Grants Pending',
+    'Memory Grants Outstanding',
+    'Maximum Workspace Memory (KB)'
+  );
+```
+
+**Find queries currently holding large memory grants**
+```sql
+SELECT mg.session_id,
+       mg.requested_memory_kb / 1024 AS requested_mb,
+       mg.granted_memory_kb / 1024 AS granted_mb,
+       mg.used_memory_kb / 1024 AS used_mb,
+       mg.query_cost,
+       qt.text AS query_text
+FROM sys.dm_exec_query_memory_grants mg
+CROSS APPLY sys.dm_exec_sql_text(mg.sql_handle) qt
+ORDER BY mg.granted_memory_kb DESC;
+```
+
+**Find queries waiting for a memory grant**
+```sql
+SELECT session_id, wait_type, wait_time_ms,
+       resource_description
+FROM sys.dm_os_waiting_tasks
+WHERE wait_type = 'RESOURCE_SEMAPHORE'
+ORDER BY wait_time_ms DESC;
+```
+
+#### Follow-up Steps
+
+1. Update statistics on the tables involved in the failing queries — bad cardinality estimates are the most common cause of oversized grants
+2. Review execution plans for the queries with the largest grants — look for large hash joins or sorts replaceable by index seeks
+3. Add indexes to eliminate or reduce sort operations that require large memory grants
+4. Implement Resource Governor to cap per-session or per-workload-group memory grants
+5. Review whether large batch or reporting queries are running during peak OLTP hours — reschedule to off-peak windows
+
+---
+
+### Error 17187 — Could Not Allocate Memory — Instance Level
+
+**Severity:** 🔴 Critical | **Category:** Memory
+
+> SQL Server engine could not allocate memory for internal operations.
+
+#### What This Alert Means
+
+Error 17187 is an instance-level memory allocation failure — SQL Server itself could not allocate memory needed for its own internal operations. This is a severe signal that the instance is in a critically low memory state and may be unstable.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Total system physical memory is exhausted | SQL Server engine components cannot function normally |
+| max server memory set too high, starving the OS | May cause SQL Server to terminate or crash |
+| Memory leak in a SQL Server component, CLR extension, or linked server provider | All connections and databases on the instance are at risk |
+| Other processes on the server consuming all available physical RAM | Applications experience complete SQL Server outage |
+
+#### What to Investigate
+
+- Immediately check available physical memory on the server
+- Check if the page file is full or near capacity
+- Review which processes are consuming memory
+- Check SQL Server max server memory vs total RAM
+
+#### SQL Queries
+
+**Check SQL Server process memory and utilization**
+```sql
+SELECT physical_memory_in_use_kb / 1024 AS physical_used_mb,
+       locked_page_allocations_kb / 1024 AS locked_pages_mb,
+       memory_utilization_percentage,
+       page_fault_count
+FROM sys.dm_os_process_memory;
+```
+
+**Check available system memory**
+```sql
+SELECT total_physical_memory_kb / 1024 AS total_ram_mb,
+       available_physical_memory_kb / 1024 AS available_ram_mb,
+       total_page_file_kb / 1024 AS total_page_file_mb,
+       available_page_file_kb / 1024 AS available_page_file_mb,
+       system_memory_state_desc
+FROM sys.dm_os_sys_memory;
+```
+
+**Check max server memory configuration**
+```sql
+SELECT name, value_in_use AS value_mb, description
+FROM sys.configurations
+WHERE name IN ('max server memory (MB)', 'min server memory (MB)');
+```
+
+**Check top memory consumers by clerk**
+```sql
+SELECT TOP 20 type, name,
+       pages_kb / 1024 AS pages_mb,
+       virtual_memory_committed_kb / 1024 AS virtual_mb
+FROM sys.dm_os_memory_clerks
+ORDER BY pages_kb DESC;
+```
+
+#### Follow-up Steps
+
+1. This is a P1 incident — take action immediately; do not wait for a crash
+2. Set max server memory to a safe value: Total RAM minus at minimum 4–6 GB for the OS
+3. If non-SQL processes are consuming RAM: identify and shut them down or move them off the server
+4. After establishing a safe max server memory: `EXEC sp_configure 'max server memory', <value>; RECONFIGURE`
+5. If SQL Server has crashed: ensure memory conditions are resolved before restarting
+6. After recovery: run `DBCC CHECKDB` on all databases — memory pressure can cause torn pages during a crash
+7. Add alerts for `system_memory_state_desc` transitions (AVAILABLE to NOTIFICATION or LOW)
+
+---
+
+### Error 17883 — Non-Yielding Scheduler
+
+**Severity:** 🔴 Critical | **Category:** Fatal Errors
+
+> A thread is not yielding CPU — potential hang or loop.
+
+#### What This Alert Means
+
+Error 17883 means a SQL Server worker thread has been scheduled on a CPU for an unusually long time without yielding — typically more than 60 seconds. SQL Server's cooperative scheduling model requires threads to yield periodically. A non-yielding thread prevents other work from executing on that scheduler.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Long-running, non-interruptible operations (large sort, hash spill, DBCC) | The affected scheduler is effectively blocked for the duration |
+| Query plan causing a near-infinite loop | Other queries waiting for that scheduler are starved |
+| External calls from within SQL Server (CLR, XPs) blocking without yielding | If multiple schedulers are affected, this becomes an instance-wide hang |
+| Resource starvation causing a thread to spin waiting for a latch or lock | SQL Server may generate a memory dump automatically |
+
+#### What to Investigate
+
+- Check the error log for the scheduler ID and thread ID in the 17883 error
+- Look for any `SQLDump*.txt` files in the SQL Server LOG directory
+- Query `sys.dm_os_schedulers` for non-idle schedulers
+- Check `sys.dm_exec_requests` for requests with very high CPU time
+
+#### SQL Queries
+
+**Check scheduler health — look for stuck schedulers**
+```sql
+SELECT scheduler_id, cpu_id, status,
+       is_idle, current_tasks_count,
+       runnable_tasks_count, active_workers_count,
+       work_queue_count, pending_disk_io_count
+FROM sys.dm_os_schedulers
+WHERE scheduler_id < 255
+ORDER BY runnable_tasks_count DESC, current_tasks_count DESC;
+```
+
+**Find long-running or high-CPU requests**
+```sql
+SELECT r.session_id, r.status, r.command,
+       r.cpu_time, r.total_elapsed_time,
+       r.wait_type, r.wait_time,
+       r.blocking_session_id, r.scheduler_id,
+       qt.text AS query_text
+FROM sys.dm_exec_requests r
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) qt
+WHERE r.session_id <> @@SPID
+ORDER BY r.cpu_time DESC;
+```
+
+**Check waiting tasks on all schedulers**
+```sql
+SELECT wt.session_id, wt.wait_type,
+       wt.wait_duration_ms, wt.blocking_session_id,
+       r.command, r.cpu_time
+FROM sys.dm_os_waiting_tasks wt
+LEFT JOIN sys.dm_exec_requests r ON wt.session_id = r.session_id
+ORDER BY wt.wait_duration_ms DESC;
+```
+
+#### Follow-up Steps
+
+1. If a specific session is confirmed as the non-yielding thread and safe to kill: `KILL <session_id>` — confirm with the application team first
+2. Preserve any SQLDump files generated — these contain stack traces needed for root cause analysis with Microsoft CSS
+3. If caused by a bad query plan: force a better plan using Query Store hints, plan guides, or index additions
+4. If CLR code is involved: review the assembly for long-running loops or blocking calls
+5. After the immediate crisis: apply the latest SQL Server Cumulative Update
+6. If recurring: engage Microsoft CSS with dump files — this is a support-escalation event
+
+---
+
+## SQL Monitor Jobs
+
+---
+
+### DBA - Autogrowth Monitor
+
+**Severity:** 🟢 Warning | **Category:** I/O & Storage
+
+> Detects file autogrowth events in the last 24 hours via default trace.
+
+#### What This Job Checks
+
+- Verifies the SQL Server default trace path is accessible — exits if not found
+- Reads EventClass 92 and 93 (data file and log file autogrowth events) from the default trace
+- Filters events to the last 24 hours only
+- Captures: event start time, database name, file name, file type (data vs log), and growth amount in pages
+- Sends one alert line per qualifying event, ordered newest first
+
+#### What This Alert Means
+
+This monitor scans the SQL Server default trace for autogrowth events in the past 24 hours. Autogrowth is not an error — it means a data or log file grew automatically because it ran out of pre-allocated space. Frequent or large autogrowths are a sign that file sizes or growth settings are not properly tuned, and each growth event causes a brief I/O pause that can impact query performance.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Data or log files were not sized adequately at creation | Brief I/O stalls during autogrowth events, which can cause query timeouts |
+| Autogrowth increment is set too small (e.g., 1 MB or 10%), causing many small growths | Disk fragmentation if growths happen frequently in small increments |
+| Unexpected spike in data volume or transaction activity | Risk of running out of disk space if growths go unmonitored |
+| Log file growing because log backups are not running frequently enough | Log file growth may indicate a log backup or long transaction problem |
+| New tables, indexes, or ETL loads adding significant data beyond the original estimate | |
+
+#### What to Investigate
+
+- Review the alert output to identify which database and file grew, by how much, and at what time
+- Determine whether this is a one-time spike or a recurring pattern — frequent small growths need tuning
+- Check current file sizes and available disk space on that volume
+- If a log file grew: check `log_reuse_wait_desc` for that database — it may indicate a log backup or replication issue
+
+#### SQL Queries
+
+**Check current data and log file sizes and free space**
+```sql
+SELECT db.name AS database_name,
+       mf.type_desc, mf.physical_name,
+       mf.size * 8 / 1024 AS total_size_mb,
+       CAST(FILEPROPERTY(mf.name, 'SpaceUsed') * 8.0 / 1024 AS DECIMAL(10,2)) AS used_mb,
+       (mf.size - FILEPROPERTY(mf.name, 'SpaceUsed')) * 8 / 1024 AS free_mb,
+       CASE mf.is_percent_growth
+         WHEN 1 THEN CAST(mf.growth AS VARCHAR) + '%'
+         ELSE CAST(mf.growth * 8 / 1024 AS VARCHAR) + ' MB'
+       END AS autogrowth_setting,
+       CASE mf.max_size
+         WHEN -1 THEN 'Unlimited'
+         ELSE CAST(mf.max_size * 8 / 1024 AS VARCHAR) + ' MB'
+       END AS max_size
+FROM sys.master_files mf
+JOIN sys.databases db ON mf.database_id = db.database_id
+ORDER BY db.name, mf.type_desc;
+```
+
+**Query default trace for autogrowth events (last 24 hours)**
+```sql
+DECLARE @tracefile VARCHAR(500);
+SELECT @tracefile = SUBSTRING(path, 1, LEN(path) - CHARINDEX('\', REVERSE(path)))
+                   + '\log.trc'
+FROM sys.traces
+WHERE is_default = 1;
+
+SELECT TOP 100
+       te.name AS event_name,
+       t.DatabaseName, t.FileName,
+       t.StartTime,
+       t.IntegerData * 8 / 1024 AS growth_mb,
+       CASE t.EventClass WHEN 92 THEN 'Data File' WHEN 93 THEN 'Log File' END AS file_type
+FROM sys.fn_trace_gettable(@tracefile, DEFAULT) t
+JOIN sys.trace_events te ON t.EventClass = te.trace_event_id
+WHERE t.EventClass IN (92, 93)
+  AND t.StartTime >= DATEADD(HOUR, -24, GETDATE())
+ORDER BY t.StartTime DESC;
+```
+
+**Check log reuse wait for databases that had log growth**
+```sql
+SELECT name, log_reuse_wait_desc, recovery_model_desc,
+       FILEPROPERTY(name, 'SpaceUsed') * 8.0 / 1024 AS log_used_mb
+FROM sys.databases
+WHERE name NOT IN ('master','model','msdb')
+ORDER BY name;
+```
+
+**Check disk space on all drives**
+```sql
+EXEC xp_fixeddrives;
+-- Cross-reference drive letters with file paths from sys.master_files
+```
+
+#### Follow-up Steps
+
+1. For each file that grew: evaluate whether the initial file size needs to be increased to eliminate frequent growths
+2. Fix autogrowth increment settings — use fixed MB values (e.g., 512 MB to 1 GB for data files, 256–512 MB for log files), never percent-based growth
+3. If a log file grew repeatedly: investigate log backup frequency and long-running transactions separately — autogrowth is a symptom, not the cause
+4. Add disk space monitoring on volumes hosting database files — autogrowth events that exhaust disk space will cause database outages
+5. If growths are happening on a schedule (e.g., during nightly ETL), pre-grow the files before the load during a maintenance window
+6. Consider scheduling a monthly review of file growth history to proactively right-size files before they cause autogrowth
+
+---
+
+### DBA - Blocking Monitor
+
+**Severity:** 🟢 Warning | **Category:** Blocking
+
+> Detects sessions blocked beyond threshold (default 120s, ReportServer 900s).
+
+#### What This Job Checks
+
+- Requires `blocking_session_id <> 0` — only considers actively blocked requests
+- Applies a default wait threshold of 120 seconds for all databases
+- Applies custom per-database thresholds: ReportServer and ReportServerTempDB use 900 seconds — SSRS blockers are common due to long report runs
+- Captures: blocked session ID, blocking session ID, wait type, database name, wait time
+- Captures blocked-side identity: login, host, program name, and SQL text
+- Captures blocker-side identity: login, host, program name, and SQL text
+- Orders results by longest wait first
+- Alerts only when at least one blocked request meets its applicable threshold
+
+#### What This Alert Means
+
+This monitor checks for active blocking chains that have exceeded their configured wait time thresholds. Blocking occurs when one session holds a lock that another session needs. Short blocking (a few seconds) is normal; sustained blocking beyond threshold indicates a problem — typically a long-running transaction, an uncommitted batch, or a missing index forcing full table scans that hold locks for too long.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| A transaction is open and not committed or rolled back, holding locks indefinitely | Blocked sessions cannot make progress — user-facing operations queue or time out |
+| A query is running a full table scan on a large table, holding shared locks for a long time | If the blocking chain grows, application-wide slowdowns or outages can result |
+| Missing indexes forcing lock escalation and broader lock coverage | Long-running blockers can fill the transaction log if they hold open transactions |
+| Application connection pools with sessions that began transactions and disconnected | Report Server databases have a longer threshold because long-running reports are expected behavior |
+| Deadlock-adjacent situations where sessions are mutually waiting but not yet deadlocked | |
+
+#### What to Investigate
+
+- Identify the head blocker — the session at the top of the chain, which is NOT blocked itself but is blocking others
+- Look at the head blocker SQL text: is it actively running a query or is it an idle open transaction?
+- Check the wait type on the blocked sessions — `LCK_M_X`, `LCK_M_S`, `LCK_M_U` are common lock waits
+- Determine whether the blocker is running normally or stuck — look at `cpu_time` and `reads` to see if it is making progress
+
+#### SQL Queries
+
+**Find all blocking chains — head blockers and their victims**
+```sql
+SELECT
+  r.session_id AS blocked_spid,
+  r.blocking_session_id AS blocker_spid,
+  r.wait_type, r.wait_time / 1000 AS wait_seconds,
+  r.wait_resource,
+  DB_NAME(r.database_id) AS database_name,
+  -- Blocked session info
+  s_blocked.login_name AS blocked_login,
+  s_blocked.host_name AS blocked_host,
+  s_blocked.program_name AS blocked_program,
+  SUBSTRING(qt_blocked.text,
+    (r.statement_start_offset/2)+1,
+    ((CASE r.statement_end_offset WHEN -1 THEN DATALENGTH(qt_blocked.text)
+      ELSE r.statement_end_offset END - r.statement_start_offset)/2)+1)
+    AS blocked_sql,
+  -- Blocker session info
+  s_blocker.login_name AS blocker_login,
+  s_blocker.host_name AS blocker_host,
+  s_blocker.program_name AS blocker_program,
+  qt_blocker.text AS blocker_sql
+FROM sys.dm_exec_requests r
+JOIN sys.dm_exec_sessions s_blocked ON r.session_id = s_blocked.session_id
+JOIN sys.dm_exec_sessions s_blocker ON r.blocking_session_id = s_blocker.session_id
+OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) qt_blocked
+OUTER APPLY sys.dm_exec_sql_text(
+  (SELECT sql_handle FROM sys.dm_exec_requests
+   WHERE session_id = r.blocking_session_id)
+) qt_blocker
+WHERE r.blocking_session_id <> 0
+ORDER BY r.wait_time DESC;
+```
+
+**Find the head blocker (not blocked, but is blocking others)**
+```sql
+SELECT s.session_id, s.login_name, s.host_name,
+       s.program_name, s.status, s.open_transaction_count,
+       r.command, r.cpu_time, r.reads, r.wait_type,
+       qt.text AS current_sql
+FROM sys.dm_exec_sessions s
+LEFT JOIN sys.dm_exec_requests r ON s.session_id = r.session_id
+OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) qt
+WHERE s.session_id IN (
+  SELECT DISTINCT blocking_session_id
+  FROM sys.dm_exec_requests
+  WHERE blocking_session_id <> 0
+)
+AND s.session_id NOT IN (
+  SELECT session_id FROM sys.dm_exec_requests
+  WHERE blocking_session_id <> 0
+)
+ORDER BY s.session_id;
+```
+
+**Check for open transactions by session**
+```sql
+SELECT s.session_id, s.login_name, s.host_name,
+       s.open_transaction_count, s.status,
+       t.transaction_begin_time,
+       DATEDIFF(MINUTE, t.transaction_begin_time, GETDATE()) AS open_minutes,
+       qt.text AS last_sql
+FROM sys.dm_exec_sessions s
+JOIN sys.dm_tran_session_transactions st ON s.session_id = st.session_id
+JOIN sys.dm_tran_active_transactions t ON st.transaction_id = t.transaction_id
+LEFT JOIN sys.dm_exec_requests r ON s.session_id = r.session_id
+OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) qt
+WHERE s.open_transaction_count > 0
+ORDER BY t.transaction_begin_time;
+```
+
+**Kill a blocking session (use with caution)**
+```sql
+-- CAUTION: Confirm with the application team before killing a session
+-- Replace 99 with the actual blocking session_id
+KILL 99;
+-- After killing: verify the blocking chain cleared
+SELECT session_id, blocking_session_id, wait_type
+FROM sys.dm_exec_requests
+WHERE blocking_session_id <> 0;
+```
+
+#### Follow-up Steps
+
+1. If the head blocker is an idle open transaction: identify the application and coordinate with the dev team to ensure transactions are properly committed or rolled back
+2. If the blocker is a long-running query: evaluate whether it can be optimized — look for missing indexes, lock hints, or reducing transaction scope
+3. Consider adding `NOLOCK` or `READ COMMITTED SNAPSHOT ISOLATION` (RCSI) for reporting queries that should not block OLTP operations
+4. Review whether the application is correctly handling connection pool sessions — idle transactions from orphaned connections are a common source of blocking
+5. If blocking is recurring from a specific pattern: review and potentially add covering indexes to reduce lock scope and duration
+6. For ReportServer databases: the 900-second threshold is intentional — only escalate if reports are blocking OLTP operations, not just each other
+
+---
+
+### DBA - Deadlock Monitor
+
+**Severity:** 🟢 Warning | **Category:** Blocking
+
+> Tracks deadlock victims from system_health XE; alerts at 2+ victims per run.
+
+#### What This Job Checks
+
+- Checks `msdb.dbo.DeadlockMonitorState` for a `DeadlockVictimMonitor` state row — errors out if missing
+- Reads the last processed UTC watermark from the state table
+- Uses a 15-second overlap window to safely re-read slightly overlapping XE data
+- Reads `xml_deadlock_report` events from `system_health*.xel` extended event files
+- Filters events to the window between the overlap-adjusted read point and current UTC
+- Extracts victim process IDs and database names from the deadlock XML
+- Deduplicates on deadlock time + victim ID + database within the current run
+- Counts victims only for online, non-read-only user databases (`database_id > 4`)
+- Alerts only if grand total of new victims >= 2 this run
+- Advances the watermark after successful processing
+
+#### What This Alert Means
+
+This monitor tracks deadlock victims by reading the XML deadlock reports written to the system_health Extended Events session, which SQL Server maintains automatically. A deadlock occurs when two or more sessions are each waiting for a lock held by the other, creating a circular dependency SQL Server cannot resolve on its own. SQL Server picks one session as the victim and rolls back its transaction. This monitor uses a watermark pattern to avoid double-counting events and only alerts when 2 or more new victims have been recorded since the last check.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Transactions accessing the same tables or rows in inconsistent order across sessions | The deadlock victim session receives error 1205 — its transaction is rolled back |
+| Missing indexes causing table scans that acquire broader locks than necessary | Application must handle the error and retry the transaction |
+| High concurrency on hot rows (e.g., a counter or status column updated by many sessions) | Frequent deadlocks cause application errors and retry overhead |
+| Long-running transactions that hold locks while performing other work | If deadlocks are clustering around specific tables, performance and reliability degrade |
+| Implicit transactions left open by the application layer | Underlying causes typically worsen over time if not addressed |
+
+#### What to Investigate
+
+- Review the deadlock XML from the alert to identify the two (or more) sessions involved, the resources they were contending on, and which was chosen as victim
+- Identify the queries involved — look at the `inputbuf` elements in the deadlock graph for the SQL being executed by each participant
+- Determine the resource being contended: is it a specific row, page, or table? What indexes are involved?
+- Look for access order inconsistency — if two queries access TableA then TableB vs TableB then TableA, reorder one of them
+
+#### SQL Queries
+
+**Read recent deadlock reports from system_health XE**
+```sql
+SELECT
+  xdr.value('@timestamp', 'datetime2') AS deadlock_time,
+  CAST(xdr.query('.') AS NVARCHAR(MAX)) AS deadlock_xml
+FROM (
+  SELECT CAST(target_data AS XML) AS target_data
+  FROM sys.dm_xe_session_targets t
+  JOIN sys.dm_xe_sessions s ON t.event_session_address = s.address
+  WHERE s.name = 'system_health'
+    AND t.target_name = 'ring_buffer'
+) AS data
+CROSS APPLY target_data.nodes('//RingBufferTarget/event[@name="xml_deadlock_report"]') AS xdt(xdr)
+ORDER BY deadlock_time DESC;
+```
+
+**Check deadlock monitor watermark state**
+```sql
+SELECT *
+FROM msdb.dbo.DeadlockMonitorState
+WHERE MonitorName = 'DeadlockVictimMonitor';
+```
+
+**Find tables involved in recent deadlocks (from XE ring buffer)**
+```sql
+-- Extracts resource table names from deadlock XML
+SELECT
+  xdr.value('@timestamp', 'datetime2') AS deadlock_time,
+  res.value('@objectname', 'nvarchar(255)') AS locked_object,
+  res.value('@indexname', 'nvarchar(255)') AS locked_index,
+  res.value('@mode', 'nvarchar(50)') AS lock_mode
+FROM (
+  SELECT CAST(target_data AS XML) AS target_data
+  FROM sys.dm_xe_session_targets t
+  JOIN sys.dm_xe_sessions s ON t.event_session_address = s.address
+  WHERE s.name = 'system_health'
+    AND t.target_name = 'ring_buffer'
+) AS data
+CROSS APPLY target_data.nodes('//RingBufferTarget/event[@name="xml_deadlock_report"]') AS xdt(xdr)
+CROSS APPLY xdr.nodes('.//resource-list//*[@objectname]') AS res_list(res)
+ORDER BY deadlock_time DESC;
+```
+
+**Check for missing indexes on tables involved in deadlocks**
+```sql
+SELECT TOP 20
+  migs.avg_total_user_cost * migs.avg_user_impact * (migs.user_seeks + migs.user_scans)
+    AS improvement_measure,
+  mid.statement AS table_name,
+  mid.equality_columns, mid.inequality_columns, mid.included_columns,
+  migs.user_seeks, migs.user_scans, migs.last_user_seek
+FROM sys.dm_db_missing_index_groups mig
+JOIN sys.dm_db_missing_index_group_stats migs
+  ON mig.index_group_handle = migs.group_handle
+JOIN sys.dm_db_missing_index_details mid
+  ON mig.index_handle = mid.index_handle
+ORDER BY improvement_measure DESC;
+```
+
+#### Follow-up Steps
+
+1. Extract and analyze the deadlock XML graphs from the alert — identify the two queries, the resources they conflict on, and the access order
+2. Check for missing indexes on the tables involved — broader lock scopes from table scans are a primary deadlock driver
+3. Review transaction scope in the application code: can any of the transactions be shortened or split to reduce the time locks are held?
+4. Consider implementing `READ_COMMITTED_SNAPSHOT_ISOLATION` (RCSI) on the affected databases — readers do not block writers and vice versa under RCSI
+5. If two queries always deadlock by accessing the same tables in opposite order: refactor one of them to use the same access order
+6. If deadlocks are clustering around a specific hot row (e.g., a global counter): consider a different design pattern (e.g., sequence object, partitioned counters)
+7. Ensure the application handles error 1205 and retries the transaction — deadlocks can never be fully eliminated; resilient retry logic is required
+
+---
+
+### DBA - Disk Latency Alert Monitor
+
+**Severity:** 🟢 Warning | **Category:** I/O & Storage
+
+> Detects I/O latency breaches with per-database thresholds and cooldown suppression.
+
+> **Note:** It is common to see isolated WARNING alerts caused by short-term I/O bursts such as file growth, maintenance activity, reporting workloads, or general system usage. These should be monitored for recurrence rather than acted on immediately. Repeated alerts or any CRITICAL alert should be investigated.
+
+#### What This Job Checks
+
+- Evaluates disk I/O latency using interval-based calculations between the most recent and previous snapshots per database/file from `dbo.DiskLatencySnapshots`
+- Calculates interval deltas including reads, writes, and average read/write latency to reflect real-time performance
+- Protects against counter resets by requiring current counters to be >= previous counters
+- Applies default latency thresholds for read/write along with minimum activity requirements
+- Supports database-specific override policies (reporting, TempDB, distribution, etc.)
+- Determines breach type as BOTH, READ, or WRITE based on which thresholds are exceeded
+- Classifies severity as WARNING or CRITICAL; CRITICAL triggers immediately, WARNING requires repeated occurrences
+- Evaluates WARNING conditions over a rolling time window to determine if required consecutive breaches have been met
+- Suppresses alerts within the cooldown window for the same database/file/type/breach combination
+- Logs all evaluated events to `dbo.DiskLatencyAlertHistory` for tracking and trend analysis
+
+#### What This Alert Means
+
+This monitor evaluates real disk I/O latency using interval-based analysis rather than cumulative counters, providing an accurate view of current storage performance. It compares consecutive snapshots collected by the Disk Latency Snapshot Collector job to calculate true latency for the most recent interval. The monitor applies policy-based thresholds that can vary by database type, supports severity levels, and uses a rolling evaluation window to prevent alert noise.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Storage subsystem overloaded — too many concurrent I/O requests | Sustained high I/O latency causes query slowdowns and potential timeouts |
+| Slow or degrading storage hardware (failing drives, degraded RAID, congested SAN) | Latency spikes during business hours directly impact user-facing application performance |
+| Insufficient I/O throughput for the workload profile | Persistent latency indicates storage cannot keep up with workload demand |
+| TempDB pressure from parallel sorts, spills, temp tables, or version store activity | Shared storage contention can impact multiple databases simultaneously |
+| Reporting or batch workloads performing large scans creating I/O contention | If left unaddressed, performance degradation may worsen over time |
+| Storage path, controller, or throughput bottlenecks during peak job windows | |
+
+#### What to Investigate
+
+- Review alert output: database, file, breach type (READ/WRITE/BOTH), and severity (WARNING or CRITICAL)
+- Determine if this is a single occurrence or part of repeated alerts within the warning window
+- Compare actual latency values against configured thresholds to assess severity of impact
+- Check reads/writes in the interval to confirm sufficient activity for a valid signal
+- Compare affected file with other files on the same volume to determine if issue is isolated or volume-wide
+- Correlate with system activity such as maintenance jobs, reporting workloads, ETL processes, or backups
+
+#### SQL Queries
+
+**Check current I/O stall stats from DMV**
+```sql
+SELECT DB_NAME(vfs.database_id) AS database_name,
+       mf.physical_name, mf.type_desc,
+       vfs.num_of_reads, vfs.io_stall_read_ms,
+       CASE WHEN vfs.num_of_reads = 0 THEN 0
+            ELSE vfs.io_stall_read_ms / vfs.num_of_reads
+       END AS avg_read_ms,
+       vfs.num_of_writes, vfs.io_stall_write_ms,
+       CASE WHEN vfs.num_of_writes = 0 THEN 0
+            ELSE vfs.io_stall_write_ms / vfs.num_of_writes
+       END AS avg_write_ms
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) vfs
+JOIN sys.master_files mf
+  ON vfs.database_id = mf.database_id
+ AND vfs.file_id = mf.file_id
+ORDER BY avg_read_ms DESC;
+```
+
+**Check recent latency alert history**
+```sql
+SELECT TOP 50
+       database_name, file_name, file_type,
+       threshold_group, breach_type,
+       avg_read_latency_ms, avg_write_latency_ms,
+       reads_in_interval, writes_in_interval,
+       alerted_at
+FROM dbo.DiskLatencyAlertHistory
+ORDER BY alerted_at DESC;
+```
+
+**Check latest snapshot data**
+```sql
+SELECT TOP 20
+       snapshot_time, database_name, logical_file_name,
+       file_type, num_of_reads, read_stall_ms,
+       num_of_writes, write_stall_ms
+FROM dbo.DiskLatencySnapshots
+ORDER BY snapshot_time DESC;
+```
+
+**Check for TempDB spills (common source of write latency)**
+```sql
+SELECT TOP 20
+       r.session_id, r.status, r.command,
+       r.reads, r.writes, r.logical_reads,
+       r.cpu_time, r.total_elapsed_time,
+       qt.text AS query_text
+FROM sys.dm_exec_requests r
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) qt
+WHERE r.writes > 10000
+ORDER BY r.writes DESC;
+```
+
+#### Follow-up Steps
+
+1. If the alert is for a specific database file: check whether that file is on a shared volume with other high-I/O workloads — separation may be required
+2. For TempDB write latency: check for query spills to TempDB (large sorts, hash joins without sufficient memory grants) — resolve with indexing or memory grant tuning
+3. For report database read latency: evaluate whether report workloads should run on a read replica or at off-peak hours
+4. Check RAID and SAN health — sustained latency breaches that span multiple files on the same volume suggest a storage infrastructure problem, not a SQL problem
+5. Review the consecutive breach count in `dbo.DiskLatencyAlertHistory` to understand the trend — increasing consecutive breaches mean the problem is getting worse
+6. If this is a new server or after a hardware change: verify the storage is properly aligned, formatted with 64KB NTFS clusters, and using the correct HBA queue depth settings
+
+---
+
+### DBA - Disk Latency Snapshot Collector
+
+**Severity:** 🟢 Warning | **Category:** Operational
+
+> Collects raw I/O counters into `dbo.DiskLatencySnapshots` for latency analysis.
+
+#### What This Job Checks
+
+- Reads current cumulative I/O counters from `sys.dm_io_virtual_file_stats(NULL,NULL)` joined to `sys.master_files`
+- Excludes rows where the database name is null
+- Captures per-file: snapshot time, database ID, file ID, database name, logical file name, physical file name, file type, number of reads, cumulative read stall ms, number of writes, cumulative write stall ms, size on disk, and sample_ms
+- Writes a new row to `dbo.DiskLatencySnapshots` on each run
+- Does not evaluate health itself — provides the raw data that the Disk Latency Alert Monitor compares between consecutive runs
+
+#### What This Alert Means
+
+This is a data collection job, not a health monitor. It runs on a regular schedule (typically every 1–5 minutes) and captures a snapshot of cumulative I/O statistics for every database file on the instance. The Disk Latency Alert Monitor then compares pairs of consecutive snapshots to calculate interval-based latency deltas. **If this job stops running, the Alert Monitor will have no data to compare and will stop alerting** — making this job critical infrastructure for the latency monitoring pipeline.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| SQL Agent service stopped, job step error, permissions issue on `dbo.DiskLatencySnapshots` | If this job fails or is stopped, the Disk Latency Alert Monitor produces no alerts |
+| Step-level timeout, blocking on the target table, or a slow DMV query on a large instance | Silent gaps in monitoring — high-latency events during the collection outage will not be detected |
+| Cleanup job not running, causing the snapshot table to grow and slow down inserts | Snapshot table growth if cleanup is not running can eventually slow down collection |
+
+#### What to Investigate
+
+- Check SQL Agent job history for this job — look for failures, step errors, or skipped runs
+- Verify the `dbo.DiskLatencySnapshots` table exists and is writable
+- Check whether the snapshot table has grown unexpectedly large — may indicate the cleanup job is not running
+- Verify the service account has execute permission on `sys.dm_io_virtual_file_stats`
+
+#### SQL Queries
+
+**Check recent snapshot collection history**
+```sql
+SELECT TOP 20
+       snapshot_time, database_name, logical_file_name,
+       file_type, num_of_reads, read_stall_ms,
+       num_of_writes, write_stall_ms
+FROM dbo.DiskLatencySnapshots
+ORDER BY snapshot_time DESC;
+```
+
+**Check how many snapshots exist and when the last one was taken**
+```sql
+SELECT
+  COUNT(*) AS total_rows,
+  MIN(snapshot_time) AS oldest_snapshot,
+  MAX(snapshot_time) AS latest_snapshot,
+  DATEDIFF(MINUTE, MAX(snapshot_time), GETDATE()) AS minutes_since_last_snapshot
+FROM dbo.DiskLatencySnapshots;
+```
+
+**Check SQL Agent job history for this collector**
+```sql
+SELECT TOP 20
+  j.name AS job_name,
+  h.run_date, h.run_time, h.run_duration,
+  CASE h.run_status
+    WHEN 0 THEN 'Failed' WHEN 1 THEN 'Succeeded'
+    WHEN 2 THEN 'Retry' WHEN 3 THEN 'Canceled'
+    ELSE 'Unknown'
+  END AS run_status,
+  h.message
+FROM msdb.dbo.sysjobhistory h
+JOIN msdb.dbo.sysjobs j ON h.job_id = j.job_id
+WHERE j.name = 'DBA - Disk Latency Snapshot Collector'
+ORDER BY h.run_date DESC, h.run_time DESC;
+```
+
+**Check current I/O stats to verify DMV is accessible**
+```sql
+SELECT TOP 10
+  DB_NAME(database_id) AS database_name,
+  file_id, num_of_reads, io_stall_read_ms,
+  num_of_writes, io_stall_write_ms, sample_ms
+FROM sys.dm_io_virtual_file_stats(NULL, NULL)
+ORDER BY io_stall_read_ms + io_stall_write_ms DESC;
+```
+
+#### Follow-up Steps
+
+1. If the job has failed: check SQL Agent job history for the error message — common causes are permissions issues or the target table being locked or missing
+2. Restart the job after resolving the failure — one missed snapshot only creates a single gap in the comparison window
+3. If the job has been stopped for an extended period: the Alert Monitor will resume working once two consecutive snapshots are collected — no manual intervention needed on the monitor side
+4. If the snapshot table is very large: verify the Cleanup job is running on schedule (should delete rows older than 14 days)
+5. Consider setting up a SQL Agent alert on this job to notify on failure — it is a dependency for the latency monitoring pipeline
+6. Verify the collection schedule matches the expectations of the Alert Monitor — if the collector runs every 5 minutes, the monitor is evaluating 5-minute intervals
+
+---
+
+### DBA - Disk Latency Snapshot Cleanup
+
+**Severity:** 🟢 Warning | **Category:** Operational
+
+> Removes snapshot and alert history older than retention thresholds.
+
+#### What This Job Checks
+
+- Deletes rows from `dbo.DiskLatencySnapshots` older than 14 days
+- Deletes rows from `dbo.DiskLatencyAlertHistory` older than 30 days
+- Does not evaluate health or send alerts — maintenance only
+
+#### What This Alert Means
+
+This is a housekeeping job that enforces data retention on the two tables used by the disk latency monitoring pipeline. Without regular cleanup, `dbo.DiskLatencySnapshots` will grow continuously (one row per file per collection interval) and eventually slow down inserts and queries. `dbo.DiskLatencyAlertHistory` is kept longer (30 days) because it is used for trend analysis and consecutive breach suppression logic in the Alert Monitor.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| SQL Agent stopped, permissions issue, table lock contention during delete | If this job stops running: both tables grow unbounded |
+| Retention not being enforced: table may grow large, causing slow inserts in the Snapshot Collector | Large snapshot table can slow down the Collector job inserts and the Alert Monitor delta queries |
+
+#### What to Investigate
+
+- Check SQL Agent job history for failures
+- Verify both tables exist and are accessible
+- Check current row counts and oldest/newest records in each table
+
+#### SQL Queries
+
+**Check row counts and retention in both tables**
+```sql
+SELECT 'DiskLatencySnapshots' AS table_name,
+       COUNT(*) AS row_count,
+       MIN(snapshot_time) AS oldest_row,
+       MAX(snapshot_time) AS newest_row,
+       DATEDIFF(DAY, MIN(snapshot_time), GETDATE()) AS age_days
+FROM dbo.DiskLatencySnapshots
+UNION ALL
+SELECT 'DiskLatencyAlertHistory',
+       COUNT(*),
+       MIN(alerted_at),
+       MAX(alerted_at),
+       DATEDIFF(DAY, MIN(alerted_at), GETDATE())
+FROM dbo.DiskLatencyAlertHistory;
+```
+
+**Check SQL Agent job history for the cleanup job**
+```sql
+SELECT TOP 10
+  j.name AS job_name,
+  h.run_date, h.run_time, h.run_duration,
+  CASE h.run_status
+    WHEN 0 THEN 'Failed' WHEN 1 THEN 'Succeeded'
+    WHEN 3 THEN 'Canceled' ELSE 'Unknown'
+  END AS run_status,
+  h.message
+FROM msdb.dbo.sysjobhistory h
+JOIN msdb.dbo.sysjobs j ON h.job_id = j.job_id
+WHERE j.name = 'DBA - Disk Latency Snapshot Cleanup'
+ORDER BY h.run_date DESC, h.run_time DESC;
+```
+
+**Manually run retention cleanup if behind**
+```sql
+-- Run manually if the cleanup job has not run in several days
+-- Adjust the retention days to match job configuration if needed
+DELETE FROM dbo.DiskLatencySnapshots
+WHERE snapshot_time < DATEADD(DAY, -14, GETDATE());
+
+DELETE FROM dbo.DiskLatencyAlertHistory
+WHERE alerted_at < DATEADD(DAY, -30, GETDATE());
+
+SELECT @@ROWCOUNT AS rows_deleted;
+```
+
+#### Follow-up Steps
+
+1. If the job has failed: check SQL Agent job history for the error — permissions issues and lock contention are the most common causes
+2. Run the manual cleanup query above if the tables have grown significantly beyond their retention window
+3. Review whether the cleanup job schedule is frequent enough — daily is typical; weekly may let tables grow large on busy instances
+4. If table growth is causing performance issues on the Collector job: consider running the manual cleanup and then immediately scheduling a full index rebuild on both tables
+5. Ensure the service account running this job has DELETE permission on both tables in the DBA monitoring database
+
+---
+
+### DBA - Replication Health Monitor
+
+**Severity:** 🔴 Critical | **Category:** Replication
+
+> Checks distribution agent status for FAIL, RETRY, NO_HISTORY, and STALE conditions.
+
+#### What This Job Checks
+
+- Verifies the distribution database, `dbo.MSdistribution_agents`, and `dbo.MSdistribution_history` exist — exits if any are missing
+- Verifies the configured SQL Server Agent email operator exists — errors out if missing
+- Reads the latest history row per distribution agent
+- Identifies unhealthy conditions: NO_HISTORY (no history row at all), RETRY (runstatus 5), FAIL (runstatus 6)
+- Identifies STALE condition: last update older than 10 minutes, runstatus is not null, and it is not a setup-only event
+- Ignores setup-only events where comments begin with "Distribution agent for subscription added%"
+- Alerts with issue type and full agent/subscription context: publisher DB, publication, subscriber, subscriber DB, duration, comments
+
+#### What This Alert Means
+
+This monitor checks the health of SQL Server transactional replication distribution agents. Distribution agents are responsible for moving committed transactions from the distribution database to each subscriber. When an agent is in FAIL or RETRY status, data is not flowing to subscribers. STALE status means the agent has not reported activity in over 10 minutes. NO_HISTORY means the agent has never run or its history was cleared.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| Subscriber database is offline, unreachable, or has disk space issues | Subscribers are not receiving committed transactions — data on subscribers is stale |
+| Network connectivity problem between distributor and subscriber | Applications reading from subscribers may return outdated data |
+| Replication conflict on the subscriber (schema mismatch, constraint violation, duplicate key) | If replication latency grows, the distribution database fills up, potentially blocking the publisher |
+| Distribution agent process crashed or was stopped by an operator | FAIL status requires manual intervention to diagnose and restart the agent |
+| Subscriber is under heavy load and cannot apply transactions fast enough (RETRY) | Long-term STALE can cause subscriber databases to fall far behind, requiring re-initialization |
+| Distributor database is running out of space or the distribution cleanup job is behind | |
+
+#### What to Investigate
+
+- Check the `runstatus` and `comments` in the alert — the comments from the distribution history often contain the actual error message
+- Verify the subscriber database is online and accessible from the distributor
+- Check whether the distribution agent process is actually running in SQL Agent jobs
+- Review the distribution database free space — a full distribution database will stall all agents
+
+#### SQL Queries
+
+**Check distribution agent status for all subscriptions**
+```sql
+SELECT
+  a.name AS agent_name,
+  a.publisher_db, a.publication,
+  a.subscriber_name, a.subscriber_db,
+  h.runstatus,
+  CASE h.runstatus
+    WHEN 1 THEN 'Start' WHEN 2 THEN 'Succeed'
+    WHEN 3 THEN 'In Progress' WHEN 4 THEN 'Idle'
+    WHEN 5 THEN 'Retry' WHEN 6 THEN 'Fail'
+    ELSE 'Unknown'
+  END AS status_desc,
+  h.time AS last_update,
+  DATEDIFF(MINUTE, h.time, GETDATE()) AS minutes_since_update,
+  h.duration,
+  h.comments
+FROM distribution.dbo.MSdistribution_agents a
+LEFT JOIN distribution.dbo.MSdistribution_history h
+  ON a.id = h.agent_id
+  AND h.timestamp = (
+    SELECT MAX(timestamp)
+    FROM distribution.dbo.MSdistribution_history
+    WHERE agent_id = a.id
+  )
+ORDER BY h.runstatus DESC, a.name;
+```
+
+**Check replication latency (tracer token method)**
+```sql
+-- Run on publisher database to check latency
+EXEC sp_posttracertoken
+  @publication = N'YourPublication',
+  @tracer_token_seqno = NULL,
+  @publisher = NULL;
+-- Then check with:
+EXEC sp_helptracertokenhistory
+  @publication = N'YourPublication',
+  @tracer_id = <token_id_from_above>;
+```
+
+**Check distribution database free space**
+```sql
+USE distribution;
+SELECT
+  mf.physical_name,
+  mf.size * 8 / 1024 AS total_mb,
+  FILEPROPERTY(mf.name, 'SpaceUsed') * 8 / 1024 AS used_mb,
+  (mf.size - FILEPROPERTY(mf.name, 'SpaceUsed')) * 8 / 1024 AS free_mb
+FROM sys.master_files mf
+WHERE mf.database_id = DB_ID('distribution')
+ORDER BY mf.type_desc;
+```
+
+**Check pending undistributed commands in distribution DB**
+```sql
+SELECT
+  a.name AS agent_name,
+  a.subscriber_name, a.subscriber_db,
+  COUNT(*) AS pending_commands
+FROM distribution.dbo.MSrepl_commands c
+JOIN distribution.dbo.MSdistribution_agents a
+  ON c.publisher_database_id = a.publisher_database_id
+WHERE c.command_id > (
+  SELECT ISNULL(MAX(xact_seqno), 0x0)
+  FROM distribution.dbo.MSdistribution_history
+  WHERE agent_id = a.id
+)
+GROUP BY a.name, a.subscriber_name, a.subscriber_db
+ORDER BY pending_commands DESC;
+```
+
+#### Follow-up Steps
+
+1. For **FAIL** status: check the `comments` field in `dbo.MSdistribution_history` for the actual error — this is your primary diagnostic — then restart the agent after resolving the root cause
+2. For **RETRY** status: the agent is trying to recover on its own — monitor it for a few minutes, but if it does not reach Succeed or In Progress, check the subscriber for connectivity or disk space issues
+3. For **STALE** status: check whether the SQL Agent job for that distribution agent is running — it may need to be manually started or investigated for crashes
+4. For **NO_HISTORY**: verify the subscription was properly initialized and the agent was started after setup
+5. If you need to reinitialize a subscription (data has drifted too far): `EXEC sp_reinitsubscription` and then restart the agent
+6. Check distribution database size and verify the distribution cleanup job is running on schedule to prevent accumulation of old commands
+
+---
+
+### DBA - TempDB Space Monitor
+
+**Severity:** 🟡 High | **Category:** I/O & Storage
+
+> Alerts when TempDB used space exceeds 90% of total allocated size.
+
+> **Note:** During Index Rebuilds and Statistics Update Maintenance, TempDB may grow during these operations. If it spills long after or outside of maintenance windows, proceed to investigate.
+
+#### What This Job Checks
+
+- Reads total TempDB data-file pages from `tempdb.sys.database_files` where `type_desc = ROWS`
+- Reads unallocated TempDB pages from `sys.dm_db_file_space_usage`
+- Calculates used pages = total pages minus unallocated pages
+- Calculates used percentage = used / total * 100
+- Alerts if used percentage >= 90%
+- Converts pages to MB and sends alert with: used percent, used MB, total MB, and threshold
+
+#### What This Alert Means
+
+This monitor tracks TempDB space utilization and alerts when the used percentage reaches 90% of the total allocated file size. TempDB is a shared resource used by all databases on the instance for temp tables, table variables, sort spills, hash spills, row versioning (RCSI/snapshot), and Service Broker. When TempDB runs out of space, any operation that needs it will fail. Unlike user databases, TempDB cannot be backed up and its space is not recoverable without restarting SQL Server or clearing the sessions consuming it.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| A query or batch is creating large temp tables or using excessive work table space | Any operation requiring TempDB space will fail with "Could not allocate space in 'tempdb'" |
+| A sort or hash operation is spilling to TempDB due to insufficient memory grants | Failures affect all databases on the instance, not just one — TempDB is instance-wide |
+| Row version store is growing — indicates long-running transactions under RCSI or snapshot isolation | System operations (index rebuilds, sorts, many aggregations) will fail |
+| Many concurrent sessions each using moderate TempDB space, collectively exhausting it | In severe cases, SQL Server itself may become unstable |
+| A runaway loop or recursive query creating unbounded temp data | TempDB cannot be restored from backup — recovery requires clearing sessions or restarting SQL Server |
+| TempDB files are not sized adequately for the workload | |
+
+#### What to Investigate
+
+- Identify which sessions are consuming the most TempDB space
+- Determine if the growth is from temp tables, sort spills, or the version store
+- Check whether any queries are spilling to disk (look for writes in `sys.dm_exec_requests`)
+- Check TempDB file autogrowth settings — if autogrowth is limited or disk is full, the alert threshold may be hit faster than expected
+
+#### SQL Queries
+
+**Check TempDB space usage summary**
+```sql
+SELECT
+  SUM(total_page_count) * 8 / 1024 AS total_mb,
+  SUM(unallocated_extent_page_count) * 8 / 1024 AS unallocated_mb,
+  (SUM(total_page_count) - SUM(unallocated_extent_page_count)) * 8 / 1024 AS used_mb,
+  CAST(
+    (SUM(total_page_count) - SUM(unallocated_extent_page_count)) * 100.0
+    / NULLIF(SUM(total_page_count), 0)
+  AS DECIMAL(5,2)) AS used_pct,
+  SUM(user_object_reserved_page_count) * 8 / 1024 AS user_objects_mb,
+  SUM(internal_object_reserved_page_count) * 8 / 1024 AS internal_objects_mb,
+  SUM(version_store_reserved_page_count) * 8 / 1024 AS version_store_mb
+FROM sys.dm_db_file_space_usage;
+```
+
+**Find sessions using the most TempDB space**
+```sql
+SELECT TOP 20
+  s.session_id, s.login_name, s.host_name, s.program_name,
+  tsu.user_objects_alloc_page_count * 8 / 1024 AS user_objects_mb,
+  tsu.internal_objects_alloc_page_count * 8 / 1024 AS internal_objects_mb,
+  (tsu.user_objects_alloc_page_count + tsu.internal_objects_alloc_page_count) * 8 / 1024
+    AS total_tempdb_mb,
+  r.command, r.status, r.wait_type,
+  qt.text AS query_text
+FROM sys.dm_db_session_space_usage tsu
+JOIN sys.dm_exec_sessions s ON tsu.session_id = s.session_id
+LEFT JOIN sys.dm_exec_requests r ON s.session_id = r.session_id
+OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) qt
+WHERE (tsu.user_objects_alloc_page_count + tsu.internal_objects_alloc_page_count) > 0
+ORDER BY total_tempdb_mb DESC;
+```
+
+**Check version store size and oldest active transaction**
+```sql
+SELECT
+  vs.reserved_page_count * 8 / 1024 AS version_store_mb,
+  vs.reserved_page_count,
+  t.transaction_id, t.transaction_begin_time,
+  DATEDIFF(MINUTE, t.transaction_begin_time, GETDATE()) AS open_minutes,
+  s.session_id, s.login_name, s.host_name
+FROM sys.dm_tran_version_store_space_usage vs
+CROSS JOIN (
+  SELECT TOP 1 t.transaction_id, t.transaction_begin_time,
+         st.session_id
+  FROM sys.dm_tran_active_transactions t
+  JOIN sys.dm_tran_session_transactions st ON t.transaction_id = st.transaction_id
+  ORDER BY t.transaction_begin_time ASC
+) t
+JOIN sys.dm_exec_sessions s ON t.session_id = s.session_id;
+```
+
+**Check TempDB file sizes and autogrowth settings**
+```sql
+SELECT
+  mf.physical_name, mf.type_desc,
+  mf.size * 8 / 1024 AS current_size_mb,
+  CASE mf.max_size
+    WHEN -1 THEN 'Unlimited'
+    ELSE CAST(mf.max_size * 8 / 1024 AS VARCHAR) + ' MB'
+  END AS max_size,
+  CASE mf.is_percent_growth
+    WHEN 1 THEN CAST(mf.growth AS VARCHAR) + '%'
+    ELSE CAST(mf.growth * 8 / 1024 AS VARCHAR) + ' MB'
+  END AS autogrowth
+FROM tempdb.sys.database_files mf
+ORDER BY mf.type_desc, mf.file_id;
+```
+
+#### Follow-up Steps
+
+1. Identify the top TempDB consumers — if a specific session is consuming a disproportionate amount, evaluate whether it can be killed or tuned
+2. If the version store is large: identify and address the oldest open transaction — RCSI version store will not shrink until that transaction completes
+3. For queries spilling to TempDB (`internal_objects_mb` is high): tune the query to reduce sort/hash spills by adding indexes or increasing available memory
+4. Consider pre-growing TempDB files to avoid autogrowth during peak hours — TempDB should be sized for peak workload, not average workload
+5. If TempDB consistently hits 90%: evaluate adding more TempDB data files (one per logical CPU, up to 8) or increasing the file size
+6. Review queries creating large temp tables in loops — these are a common cause of runaway TempDB growth and should be refactored
+7. TempDB files cannot shrink without clearing active usage or restarting — plan for TempDB sizing to grow over time, not be reclaimed
+
+---
+
+### SQL Agent Job Failure
+
+**Severity:** 🔴 Critical | **Category:** Operational
+
+> SQL Server Agent job completed with a failure status.
+
+#### What This Job Checks
+
+- Triggered when any SQL Server Agent job completes with a failed status
+- SQL Server Agent writes job outcome to `msdb.dbo.sysjobhistory` automatically
+- Alert may be configured via SQL Agent alert on job failure, or via a monitoring wrapper job that checks recent job history
+- Captures: job name, step name, failure time, error message, run duration, and exit code
+
+#### What This Alert Means
+
+A SQL Agent job failure means a scheduled automated task did not complete successfully. SQL Server Agent jobs cover a wide range of critical operations: database backups, index maintenance, statistics updates, replication agents, ETL processes, DBCC integrity checks, log shipping, and custom monitoring jobs. Any job failure should be investigated promptly because the downstream impact depends entirely on what the job was doing.
+
+#### Common Causes / Impact
+
+| Common Causes | What Can Be Impacted |
+|---|---|
+| T-SQL error in a job step (syntax error, object not found, permission denied) | **Failed backup job** = data protection gap — the most critical failure type |
+| Timeout on a long-running step that exceeded its configured limit | **Failed index maintenance** = growing index fragmentation affecting query performance |
+| Target database is offline, in recovery, or inaccessible at job run time | **Failed statistics update** = query plan degradation over time |
+| File system errors (backup target path not found, disk full, permission denied on file) | **Failed DBCC check** = unknown database integrity status |
+| Network errors if the job connects to remote servers | **Failed replication agent** = subscriber data becoming stale |
+| Dependency failures: a job step expects a prior step or job to have completed and it did not | **Failed ETL or report job** = stale or missing data in downstream systems |
+| SQL Server Agent service was stopped or restarted while the job was running | |
+
+#### What to Investigate
+
+- Identify the specific job and step that failed from the alert
+- Review the error message in the job history — this is almost always the most direct path to the cause
+- Determine the job category and assess the business impact of the failure before deciding urgency
+- Check whether the job has failed before, or whether this is the first failure
+- Check for any infrastructure changes (disk space, permissions, database state changes) that may have caused the failure
+
+#### SQL Queries
+
+**Find recent job failures with error messages**
+```sql
+SELECT TOP 50
+  j.name AS job_name,
+  js.step_name,
+  CONVERT(DATETIME,
+    STUFF(STUFF(CAST(h.run_date AS VARCHAR),7,0,'-'),5,0,'-') + ' ' +
+    STUFF(STUFF(RIGHT('000000'+CAST(h.run_time AS VARCHAR),6),5,0,':'),3,0,':')
+  ) AS run_datetime,
+  h.run_duration,
+  CASE h.run_status
+    WHEN 0 THEN 'Failed' WHEN 1 THEN 'Succeeded'
+    WHEN 2 THEN 'Retry' WHEN 3 THEN 'Canceled'
+    ELSE 'Unknown'
+  END AS run_status,
+  h.message AS error_message
+FROM msdb.dbo.sysjobhistory h
+JOIN msdb.dbo.sysjobs j ON h.job_id = j.job_id
+JOIN msdb.dbo.sysjobsteps js
+  ON j.job_id = js.job_id AND h.step_id = js.step_id
+WHERE h.run_status = 0
+  AND h.run_date >= CONVERT(INT, CONVERT(VARCHAR, DATEADD(DAY,-7,GETDATE()),112))
+ORDER BY h.run_date DESC, h.run_time DESC;
+```
+
+**Check last run status for all enabled jobs**
+```sql
+SELECT
+  j.name AS job_name,
+  j.enabled,
+  j.category_id,
+  CASE jh.run_status
+    WHEN 0 THEN 'Failed' WHEN 1 THEN 'Succeeded'
+    WHEN 2 THEN 'Retry' WHEN 3 THEN 'Canceled'
+    WHEN 4 THEN 'Running' ELSE 'Never Run'
+  END AS last_run_status,
+  CONVERT(DATETIME,
+    STUFF(STUFF(CAST(jh.run_date AS VARCHAR),7,0,'-'),5,0,'-') + ' ' +
+    STUFF(STUFF(RIGHT('000000'+CAST(jh.run_time AS VARCHAR),6),5,0,':'),3,0,':')
+  ) AS last_run_datetime,
+  jh.run_duration,
+  js_next.next_scheduled_run_date AS next_run
+FROM msdb.dbo.sysjobs j
+LEFT JOIN (
+  SELECT job_id, run_status, run_date, run_time, run_duration,
+         ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY run_date DESC, run_time DESC) AS rn
+  FROM msdb.dbo.sysjobhistory WHERE step_id = 0
+) jh ON j.job_id = jh.job_id AND jh.rn = 1
+LEFT JOIN msdb.dbo.sysjobactivity js_next
+  ON j.job_id = js_next.job_id
+  AND js_next.session_id = (SELECT MAX(session_id) FROM msdb.dbo.sysjobactivity)
+WHERE j.enabled = 1
+ORDER BY last_run_status, last_run_datetime DESC;
+```
+
+**Check job failure history trend for a specific job**
+```sql
+-- Replace 'YourJobName' with the actual job name
+SELECT
+  j.name AS job_name,
+  CONVERT(DATETIME,
+    STUFF(STUFF(CAST(h.run_date AS VARCHAR),7,0,'-'),5,0,'-') + ' ' +
+    STUFF(STUFF(RIGHT('000000'+CAST(h.run_time AS VARCHAR),6),5,0,':'),3,0,':')
+  ) AS run_datetime,
+  CASE h.run_status
+    WHEN 0 THEN 'Failed' WHEN 1 THEN 'Succeeded'
+    ELSE 'Other'
+  END AS outcome,
+  h.run_duration,
+  h.message
+FROM msdb.dbo.sysjobhistory h
+JOIN msdb.dbo.sysjobs j ON h.job_id = j.job_id
+WHERE j.name = N'YourJobName'
+  AND h.step_id = 0
+ORDER BY h.run_date DESC, h.run_time DESC;
+```
+
+**Check for currently running jobs**
+```sql
+SELECT
+  j.name AS job_name,
+  ja.start_execution_date,
+  DATEDIFF(MINUTE, ja.start_execution_date, GETDATE()) AS running_minutes,
+  js.step_name AS current_step
+FROM msdb.dbo.sysjobactivity ja
+JOIN msdb.dbo.sysjobs j ON ja.job_id = j.job_id
+LEFT JOIN msdb.dbo.sysjobsteps js
+  ON j.job_id = js.job_id AND ja.last_executed_step_id = js.step_id
+WHERE ja.session_id = (
+  SELECT MAX(session_id) FROM msdb.dbo.sysjobactivity
+)
+AND ja.start_execution_date IS NOT NULL
+AND ja.stop_execution_date IS NULL
+ORDER BY ja.start_execution_date;
+```
+
+#### Follow-up Steps
+
+1. Read the error message in the job history first — it is almost always the most direct diagnostic — before diving into infrastructure checks
+2. Assess the job category and business impact to determine urgency: backup failures are P1; report refresh failures may be P3
+3. Determine if this is a one-time failure (transient) or a recurring pattern — check the job history trend query above
+4. For backup job failures: verify immediately that another backup job or mechanism has covered the window — you must know your current RPO before anything else
+5. After fixing the root cause: manually run the job to confirm it succeeds before relying on the scheduled run
+6. For jobs that have multiple steps: review each step in the job history to understand at which step the failure occurred — the overall job outcome row (`step_id = 0`) shows the final status, but the step rows show exactly where it failed
+7. Review whether the job has notification settings — it should be configured to email on failure to ensure the failure is caught even if this alert was missed
+
+---
+
+*SQL Server Agent Runbooks — Operational Reference Guide*
