@@ -39,6 +39,11 @@ Real-world production scenarios demonstrating investigation, system design, and 
 **Results:**  
 ~2,000 deadlocks/day → near zero across 3 servers  
 
+📎 **Related Runbooks & Systems:**
+- [Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
+- [Deadlock Analysis Query](./docs/08-deadlock-analysis-query.md)
+- [SQL Server Agent Runbooks](./source/sql-agent-runbooks.html) 
+
 ---
 
 ### ⚙️ [Eliminating TempDB Latency from Statistics Maintenance](./docs/02-case-study-tempdb.md)
@@ -50,6 +55,10 @@ Real-world production scenarios demonstrating investigation, system design, and 
 **Results:**  
 Reduced TempDB load and eliminated maintenance window latency spikes  
 
+📎 **Related Runbooks & Systems:**
+- [Statistics Maintenance Framework](./docs/07-statistics-maintenance-framework.md)
+- [SQL Server Agent Runbooks](./source/sql-agent-runbooks.html) 
+
 ---
 
 ### 📡 [Building a SQL Server Alerting System Without Database Mail](./docs/03-case-study-alerting.md)
@@ -60,6 +69,10 @@ Reduced TempDB load and eliminated maintenance window latency spikes
 
 **Results:**  
 Reliable alerting, improved visibility, and simplified troubleshooting  
+
+📎 **Related Runbooks & Systems:**
+- [SQL Alert Notification System (PowerShell-Based)](./docs/02-sql-alert-notification-system.md)
+- [SQL Server Agent Runbooks](./source/sql-agent-runbooks.html)
 
 ---
 
