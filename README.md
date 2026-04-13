@@ -42,7 +42,7 @@ Real-world production scenarios demonstrating investigation, system design, and 
 📎 **Related Runbooks & Systems:**
 - [Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
 - [Deadlock Analysis Query](./docs/08-deadlock-analysis-query.md)
-- [SQL Server Agent Runbooks](./source/sql-agent-runbooks.html) 
+- [SQL Server Agent Runbooks](./source/sql-alert-runbooks.html) 
 
 ---
 
@@ -57,7 +57,7 @@ Reduced TempDB load and eliminated maintenance window latency spikes
 
 📎 **Related Runbooks & Systems:**
 - [Statistics Maintenance Framework](./docs/07-statistics-maintenance-framework.md)
-- [SQL Server Agent Runbooks](./source/sql-agent-runbooks.html) 
+- [SQL Server Agent Runbooks](./source/sql-alert-runbooks.html) 
 
 ---
 
@@ -72,7 +72,7 @@ Reliable alerting, improved visibility, and simplified troubleshooting
 
 📎 **Related Runbooks & Systems:**
 - [SQL Alert Notification System (PowerShell-Based)](./docs/02-sql-alert-notification-system.md)
-- [SQL Server Agent Runbooks](./source/sql-agent-runbooks.html)
+- [SQL Server Agent Runbooks](./source/sql-alert-runbooks.html)
 
 ---
 
