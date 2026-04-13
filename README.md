@@ -23,6 +23,46 @@ The focus is not just documentation — but **designing operational systems** th
 
 ---
 
+## 🚀 Case Studies
+
+Real-world production scenarios demonstrating investigation, system design, and operational impact.
+
+---
+
+### 🔥 [Reducing 2,000+ Daily SQL Server Deadlocks to Near Zero](./docs/01-case-study-deadlocks.md)
+
+- Identified systemic deadlock patterns using Extended Events  
+- Replaced reactive fixes with visibility-driven analysis  
+- Targeted indexing, statistics, and schema improvements  
+- Built monitoring to prevent regression  
+
+**Results:**  
+~2,000 deadlocks/day → near zero across 3 servers  
+
+---
+
+### ⚙️ [Eliminating TempDB Latency from Statistics Maintenance](./docs/02-case-study-tempdb.md)
+
+- Traced disk latency to inefficient FULLSCAN statistics updates  
+- Replaced blanket maintenance with targeted strategy  
+- Implemented phased execution (daily sampled + monthly fullscan)  
+
+**Results:**  
+Reduced TempDB load and eliminated maintenance window latency spikes  
+
+---
+
+### 📡 [Building a SQL Server Alerting System Without Database Mail](./docs/03-case-study-alerting.md)
+
+- Replaced unreliable Database Mail with queue-based alerting system  
+- Integrated SQL + PowerShell for controlled delivery  
+- Implemented full alert lifecycle tracking and retry logic  
+
+**Results:**  
+Reliable alerting, improved visibility, and simplified troubleshooting  
+
+---
+
 ## 🔥 Featured Projects (Start Here)
 
 These represent high-impact, production-grade solutions that demonstrate system design, operational thinking, and advanced SQL Server expertise.
