@@ -76,6 +76,12 @@ Reliable alerting, improved visibility, and simplified troubleshooting
 
 ---
 
+## 🧠 Operational Philosophy
+
+→ [How I Approach Production Systems](./docs/operational-philosophy.md)
+
+---
+
 ## 🔥 Featured Projects (Start Here)
 
 These represent high-impact, production-grade solutions that demonstrate system design, operational thinking, and advanced SQL Server expertise.
