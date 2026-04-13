@@ -8,6 +8,33 @@ Reference guide for responding to SQL Server Agent alerts and SQL monitoring job
 
 ---
 
+## When to Use This Runbook
+
+Use this runbook when:
+- SQL Agent alerts are triggered
+- Monitoring jobs fail
+- Immediate investigation is required
+
+Designed for fast triage and consistent response.
+
+---
+
+## Severity Levels
+
+- 🔴 Critical – Immediate action required  
+- 🟠 High – Urgent investigation  
+- 🟡 Warning – Monitor and assess patterns
+
+---
+
+## Response Expectations
+
+- Critical: Immediate (0–5 min)
+- High: Within 15–30 minutes
+- Warning: Review during standard operations
+
+---
+
 ## Table of Contents
 
 ### SQL Server Agent Alerts
