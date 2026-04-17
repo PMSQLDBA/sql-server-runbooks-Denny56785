@@ -29,7 +29,7 @@ Real-world production scenarios demonstrating investigation, system design, oper
 
 ---
 
-### 🔥 [Reducing 2,000+ Daily SQL Server Deadlocks to Near Zero](./docs/01-case-study-deadlocks.md)
+### 🔥 [Reducing 2,000+ Daily SQL Server Deadlocks to Near Zero](./docs/case-study-deadlocks.md)
 
 - Identified systemic deadlock patterns using Extended Events  
 - Replaced reactive fixes with visibility-driven analysis  
@@ -46,7 +46,7 @@ Real-world production scenarios demonstrating investigation, system design, oper
 
 ---
 
-### ⚙️ [Eliminating TempDB Latency from Statistics Maintenance](./docs/02-case-study-tempdb.md)
+### ⚙️ [Eliminating TempDB Latency from Statistics Maintenance](./docs/case-study-tempdb.md)
 
 - Traced disk latency to inefficient FULLSCAN statistics updates  
 - Replaced blanket maintenance with targeted strategy  
@@ -61,7 +61,7 @@ Reduced TempDB load and eliminated maintenance window latency spikes
 
 ---
 
-### 📡 [Building a SQL Server Alerting System Without Database Mail](./docs/03-case-study-alerting.md)
+### 📡 [Building a SQL Server Alerting System Without Database Mail](./docs/case-study-alerting.md)
 
 - Replaced unreliable Database Mail with queue-based alerting system  
 - Integrated SQL + PowerShell for controlled delivery  
@@ -78,7 +78,7 @@ Reliable alerting, improved visibility, and simplified troubleshooting
 
 ## 🧠 Operational Philosophy
 
-→ [How I Approach Production Systems](./docs/operational-philosophy.md)
+→ [How I Approach Production Systems](./docs/00-operational-philosophy.md)
 
 ---
 
