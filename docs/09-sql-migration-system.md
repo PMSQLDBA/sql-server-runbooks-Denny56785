@@ -284,4 +284,4 @@ The full procedural runbook was designed as a reusable artifact and has been ada
 
 Derived from a reusable SQL Server migration runbook and real-world implementation.
 
-* [View Full Migration Runbook (PDF)](../source/sql-migration-runbook.pdf)
+* [View Original PDF](../source/sql-migration-runbook.pdf)
