@@ -6,14 +6,10 @@
 
 ## 📖 Overview
 
-This document outlines a structured approach for performing SQL Server upgrades using a **controlled, two-phase migration strategy** designed to minimize production risk and ensure performance stability.
+The system separates engine-level and query processing changes to allow independent validation, monitoring, and rollback at each stage:
 
-The system separates:
-
-* **Engine-level changes** (SQL Server upgrade)
-* **Query processing changes** (compatibility level / optimizer behavior)
-
-to allow independent validation, monitoring, and rollback at each stage.
+- **Engine-level changes** (SQL Server upgrade)
+- **Query processing changes** (compatibility level / optimizer behavior)
 
 ---
 
