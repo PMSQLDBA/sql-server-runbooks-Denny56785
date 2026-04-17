@@ -11,6 +11,8 @@ The system separates engine-level and query processing changes to allow independ
 - **Engine-level changes** (SQL Server upgrade)
 - **Query processing changes** (compatibility level / optimizer behavior)
 
+This approach was applied during a real-world upgrade from SQL Server 2017 to 2022.
+
 ---
 
 ## ⚠️ Problem
