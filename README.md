@@ -94,6 +94,14 @@ These represent high-impact, production-grade systems demonstrating monitoring, 
 
 ---
 
+### 🚀 [SQL Server Migration Strategy & Execution System](./docs/09-sql-migration-system.md)
+- Controlled SQL Server upgrade framework (2017 → 2022)  
+- Two-phase migration model separating engine and optimizer changes  
+- Query Store-driven performance validation and regression detection  
+- Snapshot-based rollback and incremental rollout strategy    
+
+---
+
 ### 📊 [SQL Server Disk Latency Monitoring & Alerting System](./docs/06-disk-latency-monitor.md)
 - Interval-based latency detection (solves DMV limitations)  
 - Multi-job monitoring architecture (collector, evaluator, cleanup)  
@@ -103,14 +111,6 @@ These represent high-impact, production-grade systems demonstrating monitoring, 
   - Cooldown suppression  
 - Per-database tuning (tempdb, reporting workloads)  
 - Historical tracking for trend and incident analysis
-
----
-
-### 🚀 [SQL Server Migration Strategy & Execution System](./docs/09-sql-migration-system.md)
-- Controlled SQL Server upgrade framework (2017 → 2022)  
-- Two-phase migration model separating engine and optimizer changes  
-- Query Store-driven performance validation and regression detection  
-- Snapshot-based rollback and incremental rollout strategy    
 
 ---
 
