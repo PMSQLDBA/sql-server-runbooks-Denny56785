@@ -6,10 +6,12 @@
 
 ## 📖 Overview
 
-The system separates engine-level and query processing changes to allow independent validation, monitoring, and rollback at each stage. This approach was validated through a real-world upgrade from SQL Server 2017 to 2022:
+The system separates engine-level and query processing changes to allow independent validation, monitoring, and rollback at each stage:
 
 - **Engine-level changes** (SQL Server upgrade)
 - **Query processing changes** (compatibility level / optimizer behavior)
+
+This approach was validated in a real-world SQL Server 2017 → 2022 upgrade.
 
 ---
 
