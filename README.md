@@ -10,7 +10,7 @@ Technical Operations & Runbook Portfolio
 
 ## 📌 Overview
 
-This repository showcases real-world SQL Server runbooks and technical documentation built from hands-on experience stabilizing, monitoring, and operating production database environments.
+This repository showcases real-world SQL Server runbooks and technical documentation built from hands-on experience stabilizing, monitoring, and operating production database environments — including **performance optimization, incident response, and controlled system changes such as production migrations and upgrades.**
 
 > While centered on SQL Server, this portfolio reflects broader **technical operations and system reliability practices** — including monitoring design, incident response, and maintenance strategy.
 
@@ -25,7 +25,7 @@ The focus is not just documentation — but **designing operational systems** th
 
 ## 🚀 Case Studies
 
-Real-world production scenarios demonstrating investigation, system design, and operational impact.
+Real-world production scenarios demonstrating investigation, system design, operational impact, and controlled execution of changes in live environments.
 
 ---
 
@@ -84,7 +84,7 @@ Reliable alerting, improved visibility, and simplified troubleshooting
 
 ## 🔥 Featured Projects (Start Here)
 
-These represent high-impact, production-grade solutions that demonstrate system design, operational thinking, and advanced SQL Server expertise.
+These represent high-impact, production-grade systems demonstrating monitoring, performance optimization, and controlled operational change.
 
 ### 🚨 [SQL Server Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
 - Victim-based deadlock detection using Extended Events  
@@ -102,7 +102,15 @@ These represent high-impact, production-grade solutions that demonstrate system 
   - Consecutive breach detection  
   - Cooldown suppression  
 - Per-database tuning (tempdb, reporting workloads)  
-- Historical tracking for trend and incident analysis  
+- Historical tracking for trend and incident analysis
+
+---
+
+### 🚀 [SQL Server Migration Strategy & Execution System](./docs/09-sql-migration-system.md)
+- Controlled SQL Server upgrade framework (2017 → 2022)  
+- Two-phase migration model separating engine and optimizer changes  
+- Query Store-driven performance validation and regression detection  
+- Snapshot-based rollback and incremental rollout strategy    
 
 ---
 
@@ -158,7 +166,13 @@ These represent high-impact, production-grade solutions that demonstrate system 
 - Heavy table identification and workload scoring approach  
 - Targeted statistics maintenance strategy (vs blanket updates)  
 - Phased execution model (daily sampled + monthly fullscan)  
-- Reduction of maintenance overhead and improved system stability    
+- Reduction of maintenance overhead and improved system stability
+
+#### [SQL Server Migration Strategy & Execution System](./docs/09-sql-migration-system.md)
+- Controlled SQL Server upgrade framework  
+- Two-phase migration strategy (engine + compatibility)  
+- Query Store baseline and regression analysis  
+- Incremental rollout with targeted rollback capability  
 
 ---
 
@@ -170,12 +184,13 @@ These represent high-impact, production-grade solutions that demonstrate system 
 - Building **production-ready automation and workflows**  
 - Applying **noise reduction and alert tuning strategies**  
 - Bridging **deep technical work with clear documentation**
+- Executing **controlled production changes** (migrations, upgrades, and system transitions) with minimal risk  
 
 ---
 
 ## 🧠 Documentation Approach
 
-Each runbook is structured for real-world usability:
+Each runbook is structured as an operational system, designed for real-world usability and repeatable execution:
 
 - Overview  
 - Problem  
