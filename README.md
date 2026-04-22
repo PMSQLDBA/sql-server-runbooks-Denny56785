@@ -1,5 +1,6 @@
 # SQL Server Runbooks & Technical Documentation Portfolio
 
+> **Reduced 2,000+ daily SQL Server deadlocks to near zero across multi-server environments through monitoring, alerting, and targeted remediation.**
 > **Technical Operations portfolio focused on reliability, performance, and production stability — using SQL Server as a core system component.**
 
 ## 👤 Author  
@@ -33,11 +34,11 @@ Real-world production scenarios demonstrating investigation, system design, oper
 
 - Identified systemic deadlock patterns using Extended Events  
 - Replaced reactive fixes with visibility-driven analysis  
-- Targeted indexing, statistics, and schema improvements  
-- Built monitoring to prevent regression  
+- Eliminated systemic deadlock conditions by redesigning indexing and statistics strategy  
+- Implemented continuous monitoring to detect and prevent deadlock regression before impacting production 
 
 **Results:**  
-~2,000 deadlocks/day → near zero across 3 servers  
+- Reduced from ~2,000 deadlocks/day to near zero across 3 production servers, eliminating recurring application failures  
 
 📎 **Related Runbooks & Systems:**
 - [Deadlock Monitoring & Alerting System](./docs/01-deadlock-monitoring-system.md)
@@ -53,7 +54,7 @@ Real-world production scenarios demonstrating investigation, system design, oper
 - Implemented phased execution (daily sampled + monthly fullscan)  
 
 **Results:**  
-Reduced TempDB load and eliminated maintenance window latency spikes  
+- Reduced TempDB contention by replacing blanket statistics updates with targeted, workload-aware maintenance  
 
 📎 **Related Runbooks & Systems:**
 - [Statistics Maintenance Framework](./docs/07-statistics-maintenance-framework.md)
@@ -68,7 +69,7 @@ Reduced TempDB load and eliminated maintenance window latency spikes
 - Implemented full alert lifecycle tracking and retry logic  
 
 **Results:**  
-Reliable alerting, improved visibility, and simplified troubleshooting  
+- Replaced unreliable alerting pipeline with a queue-based system, improving delivery reliability and reducing troubleshooting time  
 
 📎 **Related Runbooks & Systems:**
 - [SQL Alert Notification System (PowerShell-Based)](./docs/02-sql-alert-notification-system.md)
