@@ -1,6 +1,7 @@
 # SQL Server Runbooks & Technical Documentation Portfolio
 
 > **Reduced 2,000+ daily SQL Server deadlocks to near zero across multi-server environments through monitoring, alerting, and targeted remediation.**
+
 > **Technical Operations portfolio focused on reliability, performance, and production stability — using SQL Server as a core system component.**
 
 ## 👤 Author  
