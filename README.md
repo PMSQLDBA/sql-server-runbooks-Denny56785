@@ -78,6 +78,19 @@ Real-world production scenarios demonstrating investigation, system design, oper
 
 ---
 
+### 💾 [Diagnosing Burst-Induced SQL Server Disk Latency Without Increasing Infrastructure Cost](./docs/case-study-burst-induced-sql-disk-latency.md)
+
+- Built targeted 15-second SQL capture to investigate transient ROWS file write-latency alerts
+- Identified checkpoint / dirty-page flush behavior as the primary contributor
+- Correlated SQL Server file I/O deltas with Azure VM metrics
+- Reduced write-latency severity through recovery interval tuning
+- Tuned alert thresholds only for affected databases to reduce noise without weakening global monitoring
+
+**Results:**  
+- Reduced peak observed write latency from ~426–540 ms to ~325 ms and eliminated unnecessary critical alert noise for known low-impact behavior
+
+---
+
 ## 🧠 Operational Philosophy
 
 → [How I Approach Production Systems](./docs/00-operational-philosophy.md)
