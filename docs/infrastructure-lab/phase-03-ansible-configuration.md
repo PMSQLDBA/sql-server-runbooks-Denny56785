@@ -1,6 +1,4 @@
-# Linux-Based Infrastructure Automation Lab
-
-### Phase 3 – System Configuration with Ansible
+# 🚀 Phase 3 – System Configuration with Ansible
 
 ---
 
