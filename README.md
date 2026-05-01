@@ -48,6 +48,24 @@ Real-world production scenarios demonstrating investigation, system design, oper
 
 ---
 
+### 🏗️ [Building an End-to-End Infrastructure, Deployment & Observability Lab on AWS](./docs/case-study-infrastructure-lab.md)
+
+- Designed and deployed full infrastructure → workload → monitoring pipeline using Terraform, Ansible, and Docker  
+- Implemented SQL Server workload with real-world sample databases  
+- Established Prometheus-based monitoring and Grafana visualization  
+- Automated database recovery using Ansible for repeatable provisioning  
+
+**Results:**  
+- Built a fully operational cloud-based lab demonstrating infrastructure provisioning, workload deployment, monitoring, and automation  
+
+📎 **Related Phases:**
+- [Phase 1 – Control Plane Setup](./docs/infrastructure-lab/phase-01-control-plane-setup.md)
+- [Phase 2 – Infrastructure Provisioning](./docs/infrastructure-lab/phase-02-terraform-infrastructure.md)
+- [Phase 3 – Configuration Management](./docs/infrastructure-lab/phase-03-ansible-configuration.md)
+- [Phase 4 – Workload, Monitoring & Automation](./docs/infrastructure-lab/phase-04-workload-monitoring-automation.md)
+
+---
+
 ### ⚙️ [Eliminating TempDB Latency from Statistics Maintenance](./docs/case-study-tempdb.md)
 
 - Traced disk latency to inefficient FULLSCAN statistics updates  
