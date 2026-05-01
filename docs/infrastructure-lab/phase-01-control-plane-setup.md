@@ -1,6 +1,4 @@
-# Linux-Based Infrastructure Automation Lab
-
-### Phase 1 – Control Plane Setup
+# 🚀 Phase 1 – Control Plane Setup
 
 ---
 
